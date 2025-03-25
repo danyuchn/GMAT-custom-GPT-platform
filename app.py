@@ -208,7 +208,6 @@ def logout():
 @app.route("/quant", methods=["GET", "POST"])
 @login_required
 def quant_chat():
-    # 檢查是否有進行中的聊天
     active_chat_id = session.get('active_chat_id')
     
     if not active_chat_id:
@@ -231,7 +230,19 @@ def quant_chat():
     
     if request.method == "POST":
         user_input = request.form.get("user_input")
-        instruction = request.form.get("instruction", "simple_explain")
+        instruction = request.form.get("instruction", "simple_explain")  # 确保获取参数
+        
+        # 删除旧的系统消息
+        Message.query.filter_by(chat_id=active_chat_id, role="system").delete()
+        
+        # 生成新的系统提示
+        system_message = init_conversation(instruction)[0]
+        new_system_message = Message(
+            chat_id=active_chat_id,
+            role=system_message["role"],
+            content=system_message["content"]
+        )
+        db.session.add(new_system_message)
         
         if user_input:
             # 獲取當前聊天
@@ -322,7 +333,21 @@ def quant_chat():
             total_cost=total_stats.total_cost or 0.0
         )
     
-    return render_template("chat.html")
+    # 在GET请求中传递当前instruction
+    current_instruction = request.args.get('instruction', 'simple_explain')
+    return render_template(
+        "chat.html",
+        current_instruction=current_instruction,  # 新增参数
+        chat_history=chat_history,
+        user_input=user_input,
+        model_reply=model_reply_html,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        turn_cost=turn_cost,
+        total_input_tokens=total_stats.total_input_tokens or 0,
+        total_completion_tokens=total_stats.total_completion_tokens or 0,
+        total_cost=total_stats.total_cost or 0.0
+    )
 
 @app.route("/history")
 @login_required

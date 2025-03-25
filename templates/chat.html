@@ -53,22 +53,17 @@
             {% endif %}
         </div>
 
-        <form method="POST" class="mb-3">
-            <div class="mb-3">
-                <label for="instruction" class="form-label">選擇模式：</label>
-                <select id="instruction" name="instruction" class="form-select">
-                    <option value="simple_explain">簡單解釋</option>
-                    <option value="quick_solve">實戰速解</option>
-                    <option value="variant_question">變體題</option>
-                </select>
-            </div>
+        <!-- 修改下拉菜单表单 -->
+        <form method="POST">
+            <select name="instruction" class="form-select">
+                <option value="simple_explain" {% if current_instruction=='simple_explain' %}selected{% endif %}>詳細解析</option>
+                <option value="quick_solve" {% if current_instruction=='quick_solve' %}selected{% endif %}>快速解法</option>
+                <option value="variant_question" {% if current_instruction=='variant_question' %}selected{% endif %}>變體練習</option>
+            </select>
             
-            <div class="mb-3">
-                <label for="user_input" class="form-label">輸入您的訊息：</label>
-                <textarea id="user_input" name="user_input" class="form-control" rows="3" required></textarea>
-            </div>
-            
-            <button type="submit" class="btn btn-primary w-100">送出</button>
+            <!-- 保持其他表单元素不变 -->
+            <textarea name="user_input"></textarea>
+            <button type="submit">发送</button>
         </form>
 
         {% if model_reply %}
