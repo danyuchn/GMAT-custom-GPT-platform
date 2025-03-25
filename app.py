@@ -40,8 +40,13 @@ def init_conversation(instruction="simple_explain"):
         {"role": "system", "content": system_prompt}
     ]
 
-@app.route("/", methods=["GET", "POST"])
-def chat():
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/quant")
+def quant_chat():
+    # 將原來的chat函數重命名為quant_chat
     if request.method == "POST":
         user_input = request.form.get("user_input")
         instruction = request.form.get("instruction", "simple_explain")
@@ -105,6 +110,17 @@ def chat():
             return redirect(url_for("chat"))
     
     return render_template("chat.html")
+
+# 添加其他分類的路由
+@app.route("/verbal")
+def verbal_chat():
+    # 可以根據需要實現不同的邏輯
+    return "Verbal-related 頁面（待實現）"
+
+@app.route("/graph")
+def graph_chat():
+    # 可以根據需要實現不同的邏輯
+    return "Graph-related 頁面（待實現）"
 
 if __name__ == "__main__":
     app.run(debug=True)
