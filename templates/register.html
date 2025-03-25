@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>註冊 - GMAT 解題助手</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .register-container {
+            max-width: 400px;
+            margin: 50px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <h2 class="text-center mb-4">註冊</h2>
+        
+        <!-- 在表单上方添加消息显示区域 -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="alert-container">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+        
+        <!-- 修改表单字段添加值保持 -->
+        <input type="text" name="username" class="form-control" value="{{ username }}" required>
+        <input type="email" name="email" class="form-control" value="{{ email }}" required>
+        
+        <div class="mb-3">
+            <label for="password" class="form-label">密碼</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">註冊</button>
+    </form>
+    
+    <div class="mt-3 text-center">
+        <p>已有帳號？ <a href="{{ url_for('login') }}">登入</a></p>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+<form method="POST">
+    <div class="form-group">
+        <label for="username">用戶名稱：</label>
+        <input type="text" id="username" name="username" 
+               class="form-control" 
+               placeholder="用于登录的专属名称"
+               required>
+    </div>
+    
+    <div class="form-group">
+        <label for="email">電子郵箱：</label>
+        <input type="email" id="email" name="email"
+               class="form-control"
+               placeholder="请输入常用邮箱"
+               required>
+    </div>
+    
+    <div class="form-group">
+        <label for="password">登錄密碼：</label>
+        <input type="password" id="password" name="password"
+               class="form-control"
+               placeholder="至少8位字符且包含数字"
+               minlength="8"
+               required>
+    </div>
+    
+    <button type="submit">立即注册</button>
+</form>

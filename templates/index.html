@@ -24,16 +24,38 @@
             align-items: center;
             justify-content: center;
         }
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
     </style>
 </head>
 <body>
+    <div class="user-info">
+        {% if current_user.is_authenticated %}
+            <span>歡迎, {{ current_user.username }}</span>
+            <a href="{{ url_for('history') }}" class="btn btn-sm btn-outline-secondary mx-2">聊天歷史</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">登出</a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-primary">登入</a>
+            <a href="{{ url_for('register') }}" class="btn btn-sm btn-outline-success">註冊</a>
+        {% endif %}
+    </div>
+
     <div class="container">
         <h1 class="mb-5">GMAT 題目分類</h1>
         
         <div class="d-flex justify-content-center flex-wrap">
-            <a href="/quant" class="btn btn-primary btn-category">Quant-related</a>
-            <a href="/verbal" class="btn btn-success btn-category">Verbal-related</a>
-            <a href="/graph" class="btn btn-warning btn-category">Graph-related</a>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('new_chat', category='quant') }}" class="btn btn-primary btn-category">Quant-related</a>
+                <a href="{{ url_for('new_chat', category='verbal') }}" class="btn btn-success btn-category">Verbal-related</a>
+                <a href="{{ url_for('new_chat', category='graph') }}" class="btn btn-warning btn-category">Graph-related</a>
+            {% else %}
+                <div class="alert alert-info">
+                    請先登入或註冊以開始使用解題助手。
+                </div>
+            {% endif %}
         </div>
     </div>
 
