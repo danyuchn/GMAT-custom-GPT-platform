@@ -218,8 +218,17 @@ def logout():
 @app.route("/history")
 @login_required
 def history():
-    # 獲取用戶的所有聊天記錄
-    user_chats = Chat.query.filter_by(user_id=current_user.id).order_by(Chat.timestamp.desc()).all()
+    # 获取用户的所有聊天记录
+    all_chats = Chat.query.filter_by(user_id=current_user.id).order_by(Chat.timestamp.desc()).all()
+    
+    # 过滤掉没有用户消息的聊天记录
+    user_chats = []
+    for chat in all_chats:
+        # 检查是否有用户消息
+        has_user_message = Message.query.filter_by(chat_id=chat.id, role="user").first() is not None
+        if has_user_message:
+            user_chats.append(chat)
+    
     return render_template("history.html", chats=user_chats)
 
 @app.route("/load_chat/<int:chat_id>")
@@ -258,9 +267,52 @@ def admin_chats():
     chats = []
     
     if user_id:
-        chats = Chat.query.filter_by(user_id=user_id).order_by(Chat.timestamp.desc()).all()
+        # 修改：只获取有用户消息的聊天记录
+        chats_with_user_messages = []
+        all_chats = Chat.query.filter_by(user_id=user_id).order_by(Chat.timestamp.desc()).all()
+        
+        for chat in all_chats:
+            # 检查是否有用户消息
+            has_user_message = Message.query.filter_by(chat_id=chat.id, role="user").first() is not None
+            if has_user_message:
+                chats_with_user_messages.append(chat)
+        
+        chats = chats_with_user_messages
     
     return render_template("admin_chats.html", users=users, chats=chats, selected_user_id=user_id)
+
+# 添加删除聊天记录的路由
+@app.route("/admin/delete_chats", methods=["POST"])
+@login_required
+def delete_chats():
+    # 管理员权限检查
+    if current_user.username != 'admin':
+        flash("无权访问管理页面", "danger")
+        return redirect(url_for('index'))
+    
+    chat_ids = request.form.getlist('chat_ids')
+    user_id = request.form.get('user_id')
+    
+    if not chat_ids:
+        flash("未选择任何聊天记录", "warning")
+    else:
+        try:
+            # 首先删除关联的消息
+            for chat_id in chat_ids:
+                Message.query.filter_by(chat_id=chat_id).delete()
+            
+            # 然后删除聊天记录
+            for chat_id in chat_ids:
+                Chat.query.filter_by(id=chat_id).delete()
+            
+            db.session.commit()
+            flash(f"成功删除 {len(chat_ids)} 条聊天记录", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"删除失败: {str(e)}", "danger")
+    
+    # 重定向回聊天列表页面
+    return redirect(url_for('admin_chats', user_id=user_id))
 
 # 添加查看特定聊天内容的路由
 @app.route("/admin/chat/<int:chat_id>")
@@ -387,44 +439,47 @@ def quant():  # 函数名改为quant，与路由匹配
     active_chat_id = session.get('active_chat_id')
     
     if not active_chat_id:
-        # 創建新的聊天記錄
+        # 创建新的聊天记录
         new_chat = Chat(user_id=current_user.id, category="quant")
         db.session.add(new_chat)
         db.session.commit()
         session['active_chat_id'] = new_chat.id
         
-        # 添加系統提示
+        # 添加系统提示但不立即保存到数据库，等用户发送消息后再保存
         instruction = request.form.get("instruction", "simple_explain")
-        system_message = init_conversation(instruction)[0]
-        new_message = Message(
-            chat_id=new_chat.id,
-            role=system_message["role"],
-            content=system_message["content"]
-        )
-        db.session.add(new_message)
-        db.session.commit()
+        session['pending_system_message'] = init_conversation(instruction)[0]
     
     if request.method == "POST":
         user_input = request.form.get("user_input")
         instruction = request.form.get("instruction", "simple_explain")  # 确保获取参数
         
-        # 删除旧的系统消息
-        Message.query.filter_by(chat_id=active_chat_id, role="system").delete()
-        
-        # 生成新的系统提示
-        system_message = init_conversation(instruction)[0]
-        new_system_message = Message(
-            chat_id=active_chat_id,
-            role=system_message["role"],
-            content=system_message["content"]
-        )
-        db.session.add(new_system_message)
-        
         if user_input:
-            # 獲取當前聊天
+            # 获取当前聊天
             chat_id = session['active_chat_id']
             
-            # 添加用戶訊息到資料庫
+            # 如果是第一条用户消息，先添加系统消息
+            if not Message.query.filter_by(chat_id=chat_id).first():
+                system_message = session.get('pending_system_message') or init_conversation(instruction)[0]
+                new_system_message = Message(
+                    chat_id=chat_id,
+                    role=system_message["role"],
+                    content=system_message["content"]
+                )
+                db.session.add(new_system_message)
+            else:
+                # 删除旧的系统消息
+                Message.query.filter_by(chat_id=active_chat_id, role="system").delete()
+                
+                # 生成新的系统提示
+                system_message = init_conversation(instruction)[0]
+                new_system_message = Message(
+                    chat_id=active_chat_id,
+                    role=system_message["role"],
+                    content=system_message["content"]
+                )
+                db.session.add(new_system_message)
+            
+            # 添加用户消息到数据库
             user_message = Message(
                 chat_id=chat_id,
                 role="user",
@@ -433,11 +488,11 @@ def quant():  # 函数名改为quant，与路由匹配
             db.session.add(user_message)
             db.session.commit()
             
-            # 獲取聊天歷史
+            # 获取聊天历史
             messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
             conversation_history = [{"role": msg.role, "content": msg.content} for msg in messages]
             
-            # 呼叫 OpenAI API
+            # 调用 OpenAI API
             response = client.chat.completions.create(
                 model="o3-mini",
                 messages=conversation_history,
@@ -445,7 +500,7 @@ def quant():  # 函数名改为quant，与路由匹配
             )
             model_reply = response.choices[0].message.content
             
-            # 取得 token 使用數據
+            # 获取 token 使用数据
             prompt_tokens = completion_tokens = 0
             turn_cost = 0.0
             
@@ -454,7 +509,7 @@ def quant():  # 函数名改为quant，与路由匹配
                 completion_tokens = response.usage.completion_tokens
                 _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
             
-            # 添加 AI 回覆到資料庫
+            # 添加 AI 回复到数据库
             ai_message = Message(
                 chat_id=chat_id,
                 role="assistant",
@@ -466,7 +521,7 @@ def quant():  # 函数名改为quant，与路由匹配
             db.session.add(ai_message)
             db.session.commit()
     
-    # 獲取當前聊天的所有訊息
+    # 获取当前聊天的所有消息
     chat_id = session.get('active_chat_id')
     if chat_id:
         messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
