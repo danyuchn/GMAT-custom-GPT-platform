@@ -534,16 +534,196 @@ def quant():  # 函数名改为quant，与路由匹配
 @app.route("/verbal", methods=["GET", "POST"])
 @login_required
 def verbal_chat():
-    # 实现类似quant的逻辑
-    # ... 代码略 ...
-    return render_template("verbal_chat.html", messages=[])
+    active_chat_id = session.get('active_chat_id')
+    
+    if not active_chat_id:
+        # 创建新的聊天记录
+        new_chat = Chat(user_id=current_user.id, category="verbal")
+        db.session.add(new_chat)
+        db.session.commit()
+        session['active_chat_id'] = new_chat.id
+        
+        # 添加系统提示但不立即保存到数据库，等用户发送消息后再保存
+        instruction = request.form.get("instruction", "simple_explain")
+        session['pending_system_message'] = init_conversation(instruction)[0]
+    
+    if request.method == "POST":
+        user_input = request.form.get("user_input")
+        instruction = request.form.get("instruction", "simple_explain")  # 确保获取参数
+        
+        if user_input:
+            # 获取当前聊天
+            chat_id = session['active_chat_id']
+            
+            # 如果是第一条用户消息，先添加系统消息
+            if not Message.query.filter_by(chat_id=chat_id).first():
+                system_message = session.get('pending_system_message') or init_conversation(instruction)[0]
+                new_system_message = Message(
+                    chat_id=chat_id,
+                    role=system_message["role"],
+                    content=system_message["content"]
+                )
+                db.session.add(new_system_message)
+            else:
+                # 删除旧的系统消息
+                Message.query.filter_by(chat_id=active_chat_id, role="system").delete()
+                
+                # 生成新的系统提示
+                system_message = init_conversation(instruction)[0]
+                new_system_message = Message(
+                    chat_id=active_chat_id,
+                    role=system_message["role"],
+                    content=system_message["content"]
+                )
+                db.session.add(new_system_message)
+            
+            # 添加用户消息到数据库
+            user_message = Message(
+                chat_id=chat_id,
+                role="user",
+                content=user_input
+            )
+            db.session.add(user_message)
+            db.session.commit()
+            
+            # 获取聊天历史
+            messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+            conversation_history = [{"role": msg.role, "content": msg.content} for msg in messages]
+            
+            # 调用 OpenAI API
+            response = client.chat.completions.create(
+                model="o3-mini",
+                messages=conversation_history,
+                stream=False
+            )
+            model_reply = response.choices[0].message.content
+            
+            # 获取 token 使用数据
+            prompt_tokens = completion_tokens = 0
+            turn_cost = 0.0
+            
+            if hasattr(response, 'usage'):
+                prompt_tokens = response.usage.prompt_tokens
+                completion_tokens = response.usage.completion_tokens
+                _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+            
+            # 添加 AI 回复到数据库
+            ai_message = Message(
+                chat_id=chat_id,
+                role="assistant",
+                content=model_reply,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost=turn_cost
+            )
+            db.session.add(ai_message)
+            db.session.commit()
+    
+    # 获取当前聊天的所有消息
+    chat_id = session.get('active_chat_id')
+    if chat_id:
+        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+    else:
+        messages = []
+    
+    return render_template("verbal_chat.html", messages=messages)
 
 @app.route("/graph", methods=["GET", "POST"])
 @login_required
 def graph_chat():
-    # 实现类似quant的逻辑
-    # ... 代码略 ...
-    return render_template("graph_chat.html", messages=[])
+    active_chat_id = session.get('active_chat_id')
+    
+    if not active_chat_id:
+        # 创建新的聊天记录
+        new_chat = Chat(user_id=current_user.id, category="graph")
+        db.session.add(new_chat)
+        db.session.commit()
+        session['active_chat_id'] = new_chat.id
+        
+        # 添加系统提示但不立即保存到数据库，等用户发送消息后再保存
+        instruction = request.form.get("instruction", "simple_explain")
+        session['pending_system_message'] = init_conversation(instruction)[0]
+    
+    if request.method == "POST":
+        user_input = request.form.get("user_input")
+        instruction = request.form.get("instruction", "simple_explain")  # 确保获取参数
+        
+        if user_input:
+            # 获取当前聊天
+            chat_id = session['active_chat_id']
+            
+            # 如果是第一条用户消息，先添加系统消息
+            if not Message.query.filter_by(chat_id=chat_id).first():
+                system_message = session.get('pending_system_message') or init_conversation(instruction)[0]
+                new_system_message = Message(
+                    chat_id=chat_id,
+                    role=system_message["role"],
+                    content=system_message["content"]
+                )
+                db.session.add(new_system_message)
+            else:
+                # 删除旧的系统消息
+                Message.query.filter_by(chat_id=active_chat_id, role="system").delete()
+                
+                # 生成新的系统提示
+                system_message = init_conversation(instruction)[0]
+                new_system_message = Message(
+                    chat_id=active_chat_id,
+                    role=system_message["role"],
+                    content=system_message["content"]
+                )
+                db.session.add(new_system_message)
+            
+            # 添加用户消息到数据库
+            user_message = Message(
+                chat_id=chat_id,
+                role="user",
+                content=user_input
+            )
+            db.session.add(user_message)
+            db.session.commit()
+            
+            # 获取聊天历史
+            messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+            conversation_history = [{"role": msg.role, "content": msg.content} for msg in messages]
+            
+            # 调用 OpenAI API
+            response = client.chat.completions.create(
+                model="o3-mini",
+                messages=conversation_history,
+                stream=False
+            )
+            model_reply = response.choices[0].message.content
+            
+            # 获取 token 使用数据
+            prompt_tokens = completion_tokens = 0
+            turn_cost = 0.0
+            
+            if hasattr(response, 'usage'):
+                prompt_tokens = response.usage.prompt_tokens
+                completion_tokens = response.usage.completion_tokens
+                _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+            
+            # 添加 AI 回复到数据库
+            ai_message = Message(
+                chat_id=chat_id,
+                role="assistant",
+                content=model_reply,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost=turn_cost
+            )
+            db.session.add(ai_message)
+            db.session.commit()
+    
+    # 获取当前聊天的所有消息
+    chat_id = session.get('active_chat_id')
+    if chat_id:
+        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+    else:
+        messages = []
+    
+    return render_template("graph_chat.html", messages=messages)
 
 if __name__ == "__main__":
     with app.app_context():

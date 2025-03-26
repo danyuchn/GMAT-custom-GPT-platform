@@ -3,58 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GMAT Verbal 解題助手</title>
+    <title>GMAT Verbal 助手</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-color: #f8f9fa;
-            padding: 20px;
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #7209b7;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --user-msg-color: #e7f5ff;
+            --ai-msg-color: #f0f7ff;
+            --system-msg-color: #fff8e6;
         }
-        .chat-container {
+        
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 修改头部样式，使用与主页相同的渐变蓝色背景 */
+        .chat-header {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            padding: 25px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .chat-header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .chat-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
             max-width: 800px;
             margin: 0 auto;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 20px;
         }
+        
+        /* 修改聊天容器样式，使用卡片式设计 */
+        .chat-container {
+            max-width: 1200px;
+            width: 90%;
+            margin: 20px auto;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        
+        /* 其他样式保持不变 */
+        .chat-body {
+            padding: 20px 30px;
+            flex-grow: 1;
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+        }
+        
+        /* 修改消息样式，使其更加现代化 */
         .message {
-            margin-bottom: 15px;
-            padding: 10px 15px;
-            border-radius: 10px;
-        }
-        .user-message {
-            background-color: #e9f5ff;
-            margin-right: 20%;
-        }
-        .assistant-message {
-            background-color: #f0f0f0;
-            margin-left: 20%;
-        }
-        .system-message {
-            background-color: #fff3cd;
-            margin: 10px 10%;
-            font-style: italic;
-        }
-        .chat-input {
-            margin-top: 20px;
-        }
-        .nav-buttons {
             margin-bottom: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message-content {
+            padding: 15px 20px;
+            border-radius: 15px;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        /* 修改用户消息样式 */
+        .user-message .message-content {
+            background-color: #e7f5ff;
+            margin-left: 60px;
+            margin-right: 60px;
+            border-bottom-right-radius: 5px;
+        }
+        
+        /* 修改AI消息样式 */
+        .assistant-message .message-content {
+            background-color: #f0f7ff;
+            margin-right: 60px;
+            margin-left: 60px;
+            border-bottom-left-radius: 5px;
+        }
+        
+        /* 修改系统消息样式 */
+        .system-message .message-content {
+            background-color: #fff8e6;
+            margin: 10px 80px;
+            text-align: center;
+        }
+        
+        /* 添加主题选择卡片样式 */
+        .theme-cards {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .theme-card {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            width: 200px;
+        }
+        
+        .theme-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .theme-card.active {
+            border: 2px solid var(--primary-color);
+        }
+        
+        .theme-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        /* 修改输入区域样式 */
+        .chat-input-container {
+            padding: 25px 30px;
+            background-color: white;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        /* 修改按钮样式，使用渐变色 */
+        .btn-send {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 10px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-send:hover {
+            background: linear-gradient(135deg, #3a5a9f, #2a0b73);
+            transform: translateY(-2px);
+        }
+        
+        /* 修改页脚样式 */
+        .footer {
+            margin-top: auto;
+            background-color: #212529;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .chat-container {
+                width: 95%;
+                margin: 10px auto;
+            }
+            
+            .chat-body {
+                padding: 15px;
+            }
+            
+            .user-message .message-content,
+            .assistant-message .message-content {
+                margin-left: 20px;
+                margin-right: 20px;
+            }
+            
+            .system-message .message-content {
+                margin: 10px 30px;
+            }
+            
+            .theme-cards {
+                flex-direction: column;
+                align-items: center;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="nav-buttons d-flex justify-content-between">
-            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">返回首頁</a>
-            <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">聊天歷史</a>
+    <!-- 修改头部，使用与主页相同的风格 -->
+    <header class="chat-header">
+        <div class="container">
+            <h1><i class="fas fa-book me-2"></i>GMAT 智能解題助手</h1>
+            <p>語文問題解析，提供閱讀理解與邏輯分析</p>
+            <div class="mt-3">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-light me-2"><i class="fas fa-home me-1"></i>首頁</a>
+                <a href="{{ url_for('history') }}" class="btn btn-outline-light"><i class="fas fa-history me-1"></i>歷史記錄</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light ms-2"><i class="fas fa-sign-out-alt me-1"></i>登出</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container my-4 flex-grow-1 d-flex flex-column">
+        <!-- 修改解题模式选择，使用卡片式设计 -->
+        <div class="theme-cards">
+            <div class="theme-card active" onclick="selectMode('simple_explain')">
+                <div class="theme-icon">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <h4>簡單解釋</h4>
+                <p>以高中生能理解的方式解釋解題步驟</p>
+            </div>
+            <div class="theme-card" onclick="selectMode('quick_solve')">
+                <div class="theme-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <h4>快速解法</h4>
+                <p>提供最快捷的解題方法，減少計算量</p>
+            </div>
+            <div class="theme-card" onclick="selectMode('variant_question')">
+                <div class="theme-icon">
+                    <i class="fas fa-random"></i>
+                </div>
+                <h4>變體題目</h4>
+                <p>生成類似的練習題，鞏固解題方法</p>
+            </div>
         </div>
         
         <div class="chat-container">
-            <h2 class="mb-4 text-center">GMAT Verbal 解題助手</h2>
-            
             <div class="chat-body" id="chat-messages">
+                <!-- 聊天消息内容 -->
                 {% for message in messages %}
                     {% if message.role == 'user' %}
                         <div class="message user-message">
@@ -64,9 +261,11 @@
                                 </div>
                                 <div class="message-header">
                                     <span class="message-sender">您</span>
-                                    <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') }}</span>
+                                    <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') if message.timestamp else '' }}</span>
                                 </div>
-                                <div class="message-body">{{ message.content }}</div>
+                                <div class="message-body">
+                                    {{ message.content|safe }}
+                                </div>
                             </div>
                         </div>
                     {% elif message.role == 'assistant' %}
@@ -77,99 +276,80 @@
                                 </div>
                                 <div class="message-header">
                                     <span class="message-sender">AI助手</span>
-                                    <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') }}</span>
+                                    <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') if message.timestamp else '' }}</span>
                                 </div>
-                                <div class="message-body">{{ message.content|safe }}</div>
-                                {% if message.prompt_tokens or message.completion_tokens %}
-                                    <div class="message-footer">
-                                        <span><i class="fas fa-exchange-alt me-1"></i>輸入: {{ message.prompt_tokens }} tokens</span> | 
-                                        <span><i class="fas fa-reply me-1"></i>輸出: {{ message.completion_tokens }} tokens</span> | 
-                                        <span><i class="fas fa-dollar-sign me-1"></i>成本: ${{ "%.6f"|format(message.cost) }}</span>
-                                    </div>
-                                {% endif %}
+                                <div class="message-body">
+                                    {{ message.content|safe }}
+                                </div>
                             </div>
                         </div>
                     {% elif message.role == 'system' %}
-                        <!-- 移除系統消息顯示 -->
+                        <div class="message system-message">
+                            <div class="message-content">
+                                <div class="message-body">
+                                    <i class="fas fa-info-circle me-1"></i>系統提示: {{ message.content|safe }}
+                                </div>
+                            </div>
+                        </div>
                     {% endif %}
                 {% endfor %}
-                
-                <!-- 添加加載提示 -->
-                <div class="message assistant-message loading-message" id="loading-message">
-                    <div class="message-content">
-                        <div class="message-avatar">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <div class="message-header">
-                            <span class="message-sender">AI助手</span>
-                            <span class="message-time" id="loading-time"></span>
-                        </div>
-                        <div class="message-body">
-                            <i class="fas fa-spinner fa-spin me-2"></i>等待模型思考回應中<span class="loading-dots"></span>
-                        </div>
-                    </div>
-                </div>
             </div>
             
-            <form method="POST" class="chat-input">
-                <div class="mb-3">
-                    <label for="instruction" class="form-label">解題模式</label>
-                    <select class="form-select" id="instruction" name="instruction">
-                        <option value="simple_explain">簡單解釋</option>
-                        <option value="quick_solve">快速解法</option>
-                        <option value="variant_question">變體題目</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="user_input" class="form-label">您的問題</label>
-                    <textarea class="form-control" id="user_input" name="user_input" rows="4" placeholder="請輸入您的GMAT語文問題..." required></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">發送</button>
-            </form>
+            <div class="chat-input-container">
+                <form method="POST" id="chat-form">
+                    <input type="hidden" name="instruction" id="instruction" value="simple_explain">
+                    <div class="mb-3">
+                        <textarea class="form-control" id="user-input" name="user_input" rows="3" placeholder="請輸入您的GMAT語文問題..." required></textarea>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" id="clear-btn">
+                            <i class="fas fa-eraser me-1"></i>清除
+                        </button>
+                        <button type="submit" class="btn btn-send">
+                            <i class="fas fa-paper-plane me-1"></i>發送
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-    
+
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 頁面加載完成後滾動到底部
         document.addEventListener('DOMContentLoaded', function() {
+            // 滚动到最新消息
             const chatMessages = document.getElementById('chat-messages');
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
-            // 確保加載提示在頁面加載時是隱藏的
-            const loadingMessage = document.getElementById('loading-message');
-            if (loadingMessage) {
-                loadingMessage.style.display = 'none';
-            }
+            // 清除按钮功能
+            const clearBtn = document.getElementById('clear-btn');
+            const userInput = document.getElementById('user-input');
+            
+            clearBtn.addEventListener('click', function() {
+                userInput.value = '';
+                userInput.focus();
+            });
+            
+            // 自动调整文本区域高度
+            userInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
         });
         
-        // 清除輸入框
-        function clearInput() {
-            document.getElementById('user_input').value = '';
+        // 选择解题模式
+        function selectMode(mode) {
+            const themeCards = document.querySelectorAll('.theme-card');
+            const instructionInput = document.getElementById('instruction');
+            
+            themeCards.forEach(card => {
+                card.classList.remove('active');
+            });
+            
+            event.currentTarget.classList.add('active');
+            instructionInput.value = mode;
         }
-        
-        // 顯示加載消息
-        document.querySelector('form').addEventListener('submit', function(event) {
-            // 檢查是否有輸入內容
-            const userInput = document.getElementById('user_input').value.trim();
-            if (userInput) {
-                const loadingMessage = document.getElementById('loading-message');
-                const loadingTime = document.getElementById('loading-time');
-                
-                // 設置當前時間
-                const now = new Date();
-                loadingTime.textContent = now.toTimeString().substring(0, 8);
-                
-                // 顯示加載消息
-                loadingMessage.style.display = 'block';
-                
-                // 滾動到底部
-                const chatMessages = document.getElementById('chat-messages');
-                setTimeout(() => {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }, 100);
-            }
-        });
     </script>
 </body>
 </html>
