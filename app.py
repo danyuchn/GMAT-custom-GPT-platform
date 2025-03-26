@@ -7,6 +7,8 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError  # 添加这一行导入IntegrityError
+import traceback  # 添加这一行导入traceback模块，因为你在代码中使用了traceback.format_exc()
 
 # 必须先加载环境变量
 load_dotenv('/Users/danyuchn/Documents/GitHub/GMAT-custom-GPT-platform/.env')  # 指定绝对路径
@@ -125,16 +127,14 @@ def register():
                 flash("用户名或邮箱已被使用")
                 return redirect(url_for("register"))
             
-            # 修正密码哈希方法
+            # 修正密码哈希方法 - 移除不支持的 iterations 参数
             new_user = User(
                 username=username,
                 email=email,
-                # 建议修改为更安全的哈希配置（在User模型创建时）
                 password=generate_password_hash(
                     password, 
                     method='pbkdf2:sha256', 
-                    salt_length=16,
-                    iterations=260000  # 提升迭代次数
+                    salt_length=16
                 )
             )
             
