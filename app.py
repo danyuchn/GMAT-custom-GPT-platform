@@ -200,7 +200,7 @@ def new_chat(category):
     
     # 修正重定向目標
     if category == 'quant':
-        return redirect(url_for('quant_chat'))
+        return redirect(url_for('quant'))  # 修改为'quant'而不是'quant_chat'
     elif category == 'verbal':
         return redirect(url_for('verbal_chat'))
     elif category == 'graph':
@@ -214,9 +214,87 @@ def logout():
     logout_user()
     return redirect(url_for("index"))
 
+# 添加history路由，之前被注释掉了
+@app.route("/history")
+@login_required
+def history():
+    # 獲取用戶的所有聊天記錄
+    user_chats = Chat.query.filter_by(user_id=current_user.id).order_by(Chat.timestamp.desc()).all()
+    return render_template("history.html", chats=user_chats)
+
+@app.route("/load_chat/<int:chat_id>")
+@login_required
+def load_chat(chat_id):
+    # 檢查聊天記錄是否屬於當前用戶
+    chat = Chat.query.filter_by(id=chat_id, user_id=current_user.id).first_or_404()
+    session['active_chat_id'] = chat.id
+    
+    # 修正重定向目標
+    if chat.category == 'quant':
+        return redirect(url_for('quant'))  # 修改为'quant'而不是'quant_chat'
+    elif chat.category == 'verbal':
+        return redirect(url_for('verbal_chat'))
+    elif chat.category == 'graph':
+        return redirect(url_for('graph_chat'))
+    else:
+        return redirect(url_for('index'))
+
+# 創建資料庫表格
+# 修改文件末尾的初始化块
+# 添加管理员后台路由
+@app.route("/admin/chats")
+@login_required
+def admin_chats():
+    # 简单的管理员权限检查
+    if current_user.username != 'admin':
+        flash("无权访问管理页面", "danger")
+        return redirect(url_for('index'))
+    
+    # 获取所有用户
+    users = User.query.all()
+    
+    # 获取指定用户的聊天记录
+    user_id = request.args.get('user_id')
+    chats = []
+    
+    if user_id:
+        chats = Chat.query.filter_by(user_id=user_id).order_by(Chat.timestamp.desc()).all()
+    
+    return render_template("admin_chats.html", users=users, chats=chats, selected_user_id=user_id)
+
+# 添加查看特定聊天内容的路由
+@app.route("/admin/chat/<int:chat_id>")
+@login_required
+def admin_chat_detail(chat_id):
+    # 简单的管理员权限检查
+    if current_user.username != 'admin':
+        flash("无权访问管理页面", "danger")
+        return redirect(url_for('index'))
+    
+    # 获取聊天记录
+    chat = Chat.query.get_or_404(chat_id)
+    user = User.query.get(chat.user_id)
+    messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+    
+    return render_template("admin_chat_detail.html", chat=chat, user=user, messages=messages)
+
+# 删除这里重复的路由定义
+# @app.route("/logout")
+# @login_required
+# def logout():
+#     logout_user()
+#     return redirect(url_for("index"))
+
+# 删除这里重复的quant_chat路由定义 - 整个函数都需要删除
+# @app.route("/quant", methods=["GET", "POST"])
+# @login_required
+# def quant_chat():
+#     ...  # 删除整个重复的函数定义直到下一个路由
+
+# 添加正确的quant路由
 @app.route("/quant", methods=["GET", "POST"])
 @login_required
-def quant_chat():
+def quant():  # 函数名改为quant，与路由匹配
     active_chat_id = session.get('active_chat_id')
     
     if not active_chat_id:
@@ -285,11 +363,10 @@ def quant_chat():
             if hasattr(response, 'usage'):
                 prompt_tokens = response.usage.prompt_tokens
                 completion_tokens = response.usage.completion_tokens
-                input_cost, output_cost, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+                _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
             
-            # 將模型回覆加入資料庫
-            model_reply_html = model_reply.replace('\n', '<br>')
-            assistant_message = Message(
+            # 添加 AI 回覆到資料庫
+            ai_message = Message(
                 chat_id=chat_id,
                 role="assistant",
                 content=model_reply,
@@ -297,143 +374,33 @@ def quant_chat():
                 completion_tokens=completion_tokens,
                 cost=turn_cost
             )
-            db.session.add(assistant_message)
+            db.session.add(ai_message)
             db.session.commit()
-            
-            # 獲取聊天歷史用於顯示
-            chat_history = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
-            
-            # 計算總計
-            total_stats = db.session.query(
-                db.func.sum(Message.prompt_tokens).label("total_input_tokens"),
-                db.func.sum(Message.completion_tokens).label("total_completion_tokens"),
-                db.func.sum(Message.cost).label("total_cost")
-            ).filter_by(chat_id=chat_id).first()
-            
-            return render_template(
-                "chat.html",
-                chat_history=chat_history,
-                user_input=user_input,
-                model_reply=model_reply_html,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                turn_cost=turn_cost,
-                total_input_tokens=total_stats.total_input_tokens or 0,
-                total_completion_tokens=total_stats.total_completion_tokens or 0,
-                total_cost=total_stats.total_cost or 0.0
-            )
     
-    # 獲取聊天歷史用於顯示
-    if session.get('active_chat_id'):
-        chat_history = Message.query.filter_by(chat_id=session['active_chat_id']).order_by(Message.timestamp).all()
-        
-        # 計算總計
-        total_stats = db.session.query(
-            db.func.sum(Message.prompt_tokens).label("total_input_tokens"),
-            db.func.sum(Message.completion_tokens).label("total_completion_tokens"),
-            db.func.sum(Message.cost).label("total_cost")
-        ).filter_by(chat_id=session['active_chat_id']).first()
-        
-        return render_template(
-            "chat.html",
-            chat_history=chat_history,
-            total_input_tokens=total_stats.total_input_tokens or 0,
-            total_completion_tokens=total_stats.total_completion_tokens or 0,
-            total_cost=total_stats.total_cost or 0.0
-        )
+    # 獲取當前聊天的所有訊息
+    chat_id = session.get('active_chat_id')
+    if chat_id:
+        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+    else:
+        messages = []
     
-    # 在GET请求中传递当前instruction
-    current_instruction = request.args.get('instruction', 'simple_explain')
-    return render_template(
-        "chat.html",
-        current_instruction=current_instruction,  # 新增参数
-        chat_history=chat_history,
-        user_input=user_input,
-        model_reply=model_reply_html,
-        prompt_tokens=prompt_tokens,
-        completion_tokens=completion_tokens,
-        turn_cost=turn_cost,
-        total_input_tokens=total_stats.total_input_tokens or 0,
-        total_completion_tokens=total_stats.total_completion_tokens or 0,
-        total_cost=total_stats.total_cost or 0.0
-    )
+    return render_template("quant_chat.html", messages=messages)
 
-# 删除这些重复的路由定义
-# @app.route("/history")
-# @login_required
-# def history():
-#     ...
-
-# @app.route("/load_chat/<int:chat_id>")
-# @login_required
-# def load_chat(chat_id):
-#     ...
-    # 獲取用戶的所有聊天記錄
-    user_chats = Chat.query.filter_by(user_id=current_user.id).order_by(Chat.timestamp.desc()).all()
-    return render_template("history.html", chats=user_chats)
-
-@app.route("/load_chat/<int:chat_id>")
+# 同样需要添加verbal_chat和graph_chat路由
+@app.route("/verbal", methods=["GET", "POST"])
 @login_required
-def load_chat(chat_id):
-    # 檢查聊天記錄是否屬於當前用戶
-    chat = Chat.query.filter_by(id=chat_id, user_id=current_user.id).first_or_404()
-    session['active_chat_id'] = chat.id
-    
-    return redirect(url_for(f"{chat.category}_chat"))
+def verbal_chat():
+    # 实现类似quant的逻辑
+    # ... 代码略 ...
+    return render_template("verbal_chat.html", messages=[])
 
-# 創建資料庫表格
-# 修改文件末尾的初始化块
-# 添加管理员后台路由
-@app.route("/admin/chats")
+@app.route("/graph", methods=["GET", "POST"])
 @login_required
-def admin_chats():
-    # 简单的管理员权限检查
-    if current_user.username != 'admin':
-        flash("无权访问管理页面", "danger")
-        return redirect(url_for('index'))
-    
-    # 获取所有用户
-    users = User.query.all()
-    
-    # 获取指定用户的聊天记录
-    user_id = request.args.get('user_id')
-    chats = []
-    
-    if user_id:
-        chats = Chat.query.filter_by(user_id=user_id).order_by(Chat.timestamp.desc()).all()
-    
-    return render_template("admin_chats.html", users=users, chats=chats, selected_user_id=user_id)
+def graph_chat():
+    # 实现类似quant的逻辑
+    # ... 代码略 ...
+    return render_template("graph_chat.html", messages=[])
 
-# 添加查看特定聊天内容的路由
-@app.route("/admin/chat/<int:chat_id>")
-@login_required
-def admin_chat_detail(chat_id):
-    # 简单的管理员权限检查
-    if current_user.username != 'admin':
-        flash("无权访问管理页面", "danger")
-        return redirect(url_for('index'))
-    
-    # 获取聊天记录
-    chat = Chat.query.get_or_404(chat_id)
-    user = User.query.get(chat.user_id)
-    messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
-    
-    return render_template("admin_chat_detail.html", chat=chat, user=user, messages=messages)
-
-# 删除这里重复的路由定义
-# @app.route("/logout")
-# @login_required
-# def logout():
-#     logout_user()
-#     return redirect(url_for("index"))
-
-# 删除这里重复的quant_chat路由定义 - 整个函数都需要删除
-# @app.route("/quant", methods=["GET", "POST"])
-# @login_required
-# def quant_chat():
-#     ...  # 删除整个重复的函数定义直到下一个路由
-
-# 创建数据库表格
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()

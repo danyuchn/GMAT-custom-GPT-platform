@@ -3,76 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>管理后台 - 聊天详情</title>
+    <title>管理後台 - 聊天詳情</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .chat-container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
         .message {
             margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 10px 15px;
+            border-radius: 10px;
         }
         .user-message {
             background-color: #e9f5ff;
-            border-left: 4px solid #0d6efd;
+            margin-right: 20%;
         }
         .assistant-message {
-            background-color: #e9fff0;
-            border-left: 4px solid #198754;
+            background-color: #f0f0f0;
+            margin-left: 20%;
         }
         .system-message {
-            background-color: #f8f9fa;
-            border-left: 4px solid #6c757d;
+            background-color: #fff3cd;
+            margin: 10px 10%;
             font-style: italic;
         }
     </style>
 </head>
 <body>
-    <div class="container mt-4 chat-container">
-        <h1>聊天详情</h1>
-        
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">聊天信息</h5>
-                <p><strong>用户:</strong> {{ user.username }}</p>
-                <p><strong>类型:</strong> {{ chat.category }}</p>
-                <p><strong>时间:</strong> {{ chat.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>聊天詳情</h1>
+            <div>
+                <a href="{{ url_for('admin_chats', user_id=user.id) }}" class="btn btn-outline-secondary me-2">返回用戶聊天列表</a>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">返回首頁</a>
             </div>
         </div>
         
-        <div class="card">
-            <div class="card-header">对话内容</div>
-            <div class="card-body">
-                {% for message in messages %}
-                <div class="message {% if message.role == 'user' %}user-message{% elif message.role == 'assistant' %}assistant-message{% else %}system-message{% endif %}">
-                    <div class="d-flex justify-content-between">
-                        <strong>{{ message.role|title }}:</strong>
-                        <small>{{ message.timestamp.strftime('%H:%M:%S') }}</small>
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between">
+                    <span>用戶: {{ user.username }} ({{ user.email }})</span>
+                    <span>類別: {{ chat.category }}</span>
+                    <span>時間: {{ chat.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            {% for message in messages %}
+                {% if message.role == 'user' %}
+                    <div class="message user-message">
+                        <div class="d-flex justify-content-between">
+                            <strong>用戶</strong>
+                            <small>{{ message.timestamp.strftime('%H:%M:%S') }}</small>
+                        </div>
+                        <div>{{ message.content }}</div>
                     </div>
-                    <div class="mt-2">
-                        {% if message.role == 'assistant' %}
-                            {{ message.content|safe }}
-                        {% else %}
-                            {{ message.content }}
+                {% elif message.role == 'assistant' %}
+                    <div class="message assistant-message">
+                        <div class="d-flex justify-content-between">
+                            <strong>AI助手</strong>
+                            <small>{{ message.timestamp.strftime('%H:%M:%S') }}</small>
+                        </div>
+                        <div>{{ message.content|safe }}</div>
+                        {% if message.prompt_tokens or message.completion_tokens %}
+                            <div class="mt-2 text-muted small">
+                                輸入: {{ message.prompt_tokens }} tokens | 
+                                輸出: {{ message.completion_tokens }} tokens | 
+                                成本: ${{ "%.6f"|format(message.cost) }}
+                            </div>
                         {% endif %}
                     </div>
-                    {% if message.prompt_tokens or message.completion_tokens %}
-                    <div class="mt-2 text-muted small">
-                        <span>输入tokens: {{ message.prompt_tokens }}</span> | 
-                        <span>输出tokens: {{ message.completion_tokens }}</span> | 
-                        <span>成本: ${{ "%.6f"|format(message.cost) }}</span>
+                {% elif message.role == 'system' %}
+                    <div class="message system-message">
+                        <div><strong>系統提示:</strong> {{ message.content }}</div>
                     </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        
-        <div class="mt-3">
-            <a href="{{ url_for('admin_chats', user_id=user.id) }}" class="btn btn-secondary">返回用户聊天列表</a>
+                {% endif %}
+            {% endfor %}
         </div>
     </div>
     
