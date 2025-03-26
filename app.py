@@ -367,6 +367,211 @@ def load_chat(chat_id):
 
 # 創建資料庫表格
 # 修改文件末尾的初始化块
+# 添加管理员后台路由
+@app.route("/admin/chats")
+@login_required
+def admin_chats():
+    # 简单的管理员权限检查
+    if current_user.username != 'admin':
+        flash("无权访问管理页面", "danger")
+        return redirect(url_for('index'))
+    
+    # 获取所有用户
+    users = User.query.all()
+    
+    # 获取指定用户的聊天记录
+    user_id = request.args.get('user_id')
+    chats = []
+    
+    if user_id:
+        chats = Chat.query.filter_by(user_id=user_id).order_by(Chat.timestamp.desc()).all()
+    
+    return render_template("admin_chats.html", users=users, chats=chats, selected_user_id=user_id)
+
+# 添加查看特定聊天内容的路由
+@app.route("/admin/chat/<int:chat_id>")
+@login_required
+def admin_chat_detail(chat_id):
+    # 简单的管理员权限检查
+    if current_user.username != 'admin':
+        flash("无权访问管理页面", "danger")
+        return redirect(url_for('index'))
+    
+    # 获取聊天记录
+    chat = Chat.query.get_or_404(chat_id)
+    user = User.query.get(chat.user_id)
+    messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+    
+    return render_template("admin_chat_detail.html", chat=chat, user=user, messages=messages)
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("index"))
+
+@app.route("/quant", methods=["GET", "POST"])
+@login_required
+def quant_chat():
+    active_chat_id = session.get('active_chat_id')
+    
+    if not active_chat_id:
+        # 創建新的聊天記錄
+        new_chat = Chat(user_id=current_user.id, category="quant")
+        db.session.add(new_chat)
+        db.session.commit()
+        session['active_chat_id'] = new_chat.id
+        
+        # 添加系統提示
+        instruction = request.form.get("instruction", "simple_explain")
+        system_message = init_conversation(instruction)[0]
+        new_message = Message(
+            chat_id=new_chat.id,
+            role=system_message["role"],
+            content=system_message["content"]
+        )
+        db.session.add(new_message)
+        db.session.commit()
+    
+    if request.method == "POST":
+        user_input = request.form.get("user_input")
+        instruction = request.form.get("instruction", "simple_explain")  # 确保获取参数
+        
+        # 删除旧的系统消息
+        Message.query.filter_by(chat_id=active_chat_id, role="system").delete()
+        
+        # 生成新的系统提示
+        system_message = init_conversation(instruction)[0]
+        new_system_message = Message(
+            chat_id=active_chat_id,
+            role=system_message["role"],
+            content=system_message["content"]
+        )
+        db.session.add(new_system_message)
+        
+        if user_input:
+            # 獲取當前聊天
+            chat_id = session['active_chat_id']
+            
+            # 添加用戶訊息到資料庫
+            user_message = Message(
+                chat_id=chat_id,
+                role="user",
+                content=user_input
+            )
+            db.session.add(user_message)
+            db.session.commit()
+            
+            # 獲取聊天歷史
+            messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+            conversation_history = [{"role": msg.role, "content": msg.content} for msg in messages]
+            
+            # 呼叫 OpenAI API
+            response = client.chat.completions.create(
+                model="o3-mini",
+                messages=conversation_history,
+                stream=False
+            )
+            model_reply = response.choices[0].message.content
+            
+            # 取得 token 使用數據
+            prompt_tokens = completion_tokens = 0
+            turn_cost = 0.0
+            
+            if hasattr(response, 'usage'):
+                prompt_tokens = response.usage.prompt_tokens
+                completion_tokens = response.usage.completion_tokens
+                input_cost, output_cost, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+            
+            # 將模型回覆加入資料庫
+            model_reply_html = model_reply.replace('\n', '<br>')
+            assistant_message = Message(
+                chat_id=chat_id,
+                role="assistant",
+                content=model_reply,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost=turn_cost
+            )
+            db.session.add(assistant_message)
+            db.session.commit()
+            
+            # 獲取聊天歷史用於顯示
+            chat_history = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+            
+            # 計算總計
+            total_stats = db.session.query(
+                db.func.sum(Message.prompt_tokens).label("total_input_tokens"),
+                db.func.sum(Message.completion_tokens).label("total_completion_tokens"),
+                db.func.sum(Message.cost).label("total_cost")
+            ).filter_by(chat_id=chat_id).first()
+            
+            return render_template(
+                "chat.html",
+                chat_history=chat_history,
+                user_input=user_input,
+                model_reply=model_reply_html,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                turn_cost=turn_cost,
+                total_input_tokens=total_stats.total_input_tokens or 0,
+                total_completion_tokens=total_stats.total_completion_tokens or 0,
+                total_cost=total_stats.total_cost or 0.0
+            )
+    
+    # 獲取聊天歷史用於顯示
+    if session.get('active_chat_id'):
+        chat_history = Message.query.filter_by(chat_id=session['active_chat_id']).order_by(Message.timestamp).all()
+        
+        # 計算總計
+        total_stats = db.session.query(
+            db.func.sum(Message.prompt_tokens).label("total_input_tokens"),
+            db.func.sum(Message.completion_tokens).label("total_completion_tokens"),
+            db.func.sum(Message.cost).label("total_cost")
+        ).filter_by(chat_id=session['active_chat_id']).first()
+        
+        return render_template(
+            "chat.html",
+            chat_history=chat_history,
+            total_input_tokens=total_stats.total_input_tokens or 0,
+            total_completion_tokens=total_stats.total_completion_tokens or 0,
+            total_cost=total_stats.total_cost or 0.0
+        )
+    
+    # 在GET请求中传递当前instruction
+    current_instruction = request.args.get('instruction', 'simple_explain')
+    return render_template(
+        "chat.html",
+        current_instruction=current_instruction,  # 新增参数
+        chat_history=chat_history,
+        user_input=user_input,
+        model_reply=model_reply_html,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        turn_cost=turn_cost,
+        total_input_tokens=total_stats.total_input_tokens or 0,
+        total_completion_tokens=total_stats.total_completion_tokens or 0,
+        total_cost=total_stats.total_cost or 0.0
+    )
+
+@app.route("/history")
+@login_required
+def history():
+    # 獲取用戶的所有聊天記錄
+    user_chats = Chat.query.filter_by(user_id=current_user.id).order_by(Chat.timestamp.desc()).all()
+    return render_template("history.html", chats=user_chats)
+
+@app.route("/load_chat/<int:chat_id>")
+@login_required
+def load_chat(chat_id):
+    # 檢查聊天記錄是否屬於當前用戶
+    chat = Chat.query.filter_by(id=chat_id, user_id=current_user.id).first_or_404()
+    session['active_chat_id'] = chat.id
+    
+    return redirect(url_for(f"{chat.category}_chat"))
+
+# 創建資料庫表格
+# 修改文件末尾的初始化块
 if __name__ == "__main__":
     with app.app_context():  # <-- 这里已经正确设置应用上下文
         db.create_all()
