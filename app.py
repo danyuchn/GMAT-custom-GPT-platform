@@ -72,7 +72,10 @@ def calculate_cost(prompt_tokens, completion_tokens, cached_input_tokens=0):
     total_cost = input_cost + output_cost
     return input_cost, output_cost, total_cost
 
-# 初始化對話歷史
+# 導入token管理模組並初始化
+import token_manager
+token_manager.init_app(db, app)
+
 def init_conversation(instruction="simple_explain"):
     system_prompts = {
         "simple_explain": "請用繁體中文解釋解題步驟，並以高中生能理解的方式回答。",
@@ -355,6 +358,7 @@ def show_analysis_result():
                           questions_count=questions_count)
 
 # 聊天處理通用函數
+# 導入token管理模組
 def handle_chat(category, template_name):
     active_chat_id = session.get('active_chat_id')
     
@@ -367,11 +371,25 @@ def handle_chat(category, template_name):
         instruction = request.form.get("instruction", "simple_explain")
         session['pending_system_message'] = init_conversation(instruction)[0]
     
+    # 獲取用戶當前餘額
+    current_balance = token_manager.get_balance(current_user.id)
+    
     if request.method == "POST":
         user_input = request.form.get("user_input")
         instruction = request.form.get("instruction", "simple_explain")
         
         if user_input:
+            # 檢查用戶餘額是否足夠
+            has_balance, balance = token_manager.check_balance(current_user.id)
+            if not has_balance:
+                flash(f"您的API餘額不足，請等待下週日重置。當前餘額: {balance:.4f} 元", "warning")
+                chat_id = session.get('active_chat_id')
+                if chat_id:
+                    messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+                else:
+                    messages = []
+                return render_template(template_name, messages=messages, api_balance=balance)
+            
             chat_id = session['active_chat_id']
             
             if not Message.query.filter_by(chat_id=chat_id).first():
@@ -411,6 +429,7 @@ def handle_chat(category, template_name):
             )
             model_reply = response.choices[0].message.content
             
+            # 獲取API回應後，扣除成本
             prompt_tokens = completion_tokens = 0
             turn_cost = 0.0
             
@@ -418,6 +437,13 @@ def handle_chat(category, template_name):
                 prompt_tokens = response.usage.prompt_tokens
                 completion_tokens = response.usage.completion_tokens
                 _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+                
+                # 扣除用戶餘額
+                new_balance = token_manager.deduct_balance(current_user.id, turn_cost)
+                
+                # 如果餘額不足，提示用戶
+                if new_balance <= 0:
+                    flash(f"您的API餘額已用完，請等待下週日重置。", "warning")
             
             ai_message = Message(
                 chat_id=chat_id,
@@ -436,7 +462,14 @@ def handle_chat(category, template_name):
     else:
         messages = []
     
-    return render_template(template_name, messages=messages)
+    # 獲取下次重置時間
+    next_reset = token_manager.get_next_reset_time()
+    days_until_reset = (next_reset - datetime.utcnow()).days
+    
+    return render_template(template_name, 
+                          messages=messages, 
+                          api_balance=current_balance,
+                          days_until_reset=days_until_reset)
 
 # 聊天路由
 @app.route("/quant", methods=["GET", "POST"])

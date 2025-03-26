@@ -464,3 +464,62 @@
     {% block extra_js %}{% endblock %}
 </body>
 </html>
+
+
+<!-- 在適當位置添加以下代碼，例如在頁面頂部或側邊欄 -->
+{% if api_balance is defined %}
+<div class="api-balance-container">
+    <div class="api-balance-info">
+        <span class="api-balance-label">API餘額:</span>
+        <span class="api-balance-value {% if api_balance < 1 %}text-danger{% elif api_balance < 3 %}text-warning{% else %}text-success{% endif %}">
+            {{ "%.4f"|format(api_balance) }} 元
+        </span>
+        {% if days_until_reset is defined %}
+        <small class="api-balance-reset">
+            ({{ days_until_reset }} 天後重置)
+        </small>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .api-balance-container {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 5px 10px;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        font-size: 0.85rem;
+        max-width: 200px;
+        text-align: center;
+    }
+    
+    .api-balance-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .api-balance-value {
+        font-weight: bold;
+        font-size: 1rem;
+    }
+    
+    .api-balance-reset {
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+    
+    @media (max-width: 768px) {
+        .api-balance-container {
+            top: auto;
+            bottom: 70px;
+            right: 10px;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+{% endif %}
