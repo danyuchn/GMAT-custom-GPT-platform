@@ -278,6 +278,95 @@ def admin_chat_detail(chat_id):
     
     return render_template("admin_chat_detail.html", chat=chat, user=user, messages=messages)
 
+# 添加新的路由用于分析学生问题
+@app.route("/admin/analyze_user/<int:user_id>", methods=["GET"])
+@login_required
+def analyze_user_questions(user_id):
+    # 管理员权限检查
+    if current_user.username != 'admin':
+        flash("无权访问管理页面", "danger")
+        return redirect(url_for('index'))
+    
+    # 获取用户信息
+    user = User.query.get_or_404(user_id)
+    
+    # 获取该用户的所有聊天记录
+    chats = Chat.query.filter_by(user_id=user_id).all()
+    
+    # 提取所有用户问题
+    all_questions = []
+    for chat in chats:
+        # 只获取用户的消息
+        user_messages = Message.query.filter_by(chat_id=chat.id, role="user").order_by(Message.timestamp).all()
+        for msg in user_messages:
+            # 添加问题和分类信息
+            all_questions.append({
+                "category": chat.category,
+                "timestamp": msg.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                "content": msg.content
+            })
+    
+    # 如果没有问题，返回提示
+    if not all_questions:
+        flash("该用户没有提问记录", "warning")
+        return redirect(url_for('admin_chats', user_id=user_id))
+    
+    # 构建问题文本
+    questions_text = f"学生: {user.username}\n\n"
+    for i, q in enumerate(all_questions, 1):
+        questions_text += f"问题 {i} ({q['category']} - {q['timestamp']}):\n{q['content']}\n\n"
+    
+    # 调用OpenAI API进行分析
+    try:
+        response = client.chat.completions.create(
+            model="o3-mini",
+            messages=[
+                {"role": "system", "content": "你是一位老師，請分析這位同學詢問的問題集，告訴我他的弱項概念有哪些"},
+                {"role": "user", "content": questions_text}
+            ],
+            stream=False
+        )
+        
+        analysis_result = response.choices[0].message.content
+        
+        # 保存分析结果到会话，以便在模板中显示
+        session['analysis_result'] = analysis_result
+        session['analyzed_user_id'] = user_id
+        session['analyzed_user_name'] = user.username
+        session['questions_count'] = len(all_questions)
+        
+        # 重定向到结果页面
+        return redirect(url_for('show_analysis_result'))
+        
+    except Exception as e:
+        flash(f"分析过程中出现错误: {str(e)}", "danger")
+        return redirect(url_for('admin_chats', user_id=user_id))
+
+# 添加显示分析结果的路由
+@app.route("/admin/analysis_result")
+@login_required
+def show_analysis_result():
+    # 管理员权限检查
+    if current_user.username != 'admin':
+        flash("无权访问管理页面", "danger")
+        return redirect(url_for('index'))
+    
+    # 从会话中获取分析结果
+    analysis_result = session.get('analysis_result')
+    user_id = session.get('analyzed_user_id')
+    user_name = session.get('analyzed_user_name')
+    questions_count = session.get('questions_count')
+    
+    if not analysis_result or not user_id:
+        flash("没有可用的分析结果", "warning")
+        return redirect(url_for('admin_chats'))
+    
+    return render_template("analysis_result.html", 
+                          analysis_result=analysis_result, 
+                          user_id=user_id,
+                          user_name=user_name,
+                          questions_count=questions_count)
+
 # 删除这里重复的路由定义
 # @app.route("/logout")
 # @login_required
