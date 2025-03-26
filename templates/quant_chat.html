@@ -120,8 +120,47 @@
         .theme-cards {
             display: flex;
             justify-content: center;
-            gap: 20px;
-            margin: 30px 0;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .theme-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            width: 180px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .theme-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .theme-card.active {
+            background-color: #e7f5ff;
+            border: 2px solid #4361ee;
+        }
+        
+        .theme-icon {
+            font-size: 2rem;
+            color: #4361ee;
+            margin-bottom: 10px;
+        }
+        
+        .theme-card h4 {
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+        }
+        
+        .theme-card p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #6c757d;
         }
         
         .theme-card {
@@ -246,6 +285,21 @@
                 </div>
                 <h4>變體題目</h4>
                 <p>生成類似的練習題，鞏固解題方法</p>
+            </div>
+            <!-- 新增兩個解題模式卡片 -->
+            <div class="theme-card" onclick="selectMode('concept_explanation')">
+                <div class="theme-icon">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <h4>觀念補充</h4>
+                <p>分析題目測試的數學概念與知識點</p>
+            </div>
+            <div class="theme-card" onclick="selectMode('pattern_recognition')">
+                <div class="theme-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h4>題型線索</h4>
+                <p>識別適用此解法的題目特徵</p>
             </div>
         </div>
         
@@ -378,27 +432,29 @@
             }
         }
         
-        // 顯示加載消息
-        document.querySelector('form').addEventListener('submit', function(event) {
-            // 檢查是否有輸入內容
-            const userInput = document.getElementById('user_input').value.trim();
-            if (userInput) {
+        // 在表单提交前处理
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('.chat-form');
+            
+            form.addEventListener('submit', function(event) {
+                // 显示加载消息
                 const loadingMessage = document.getElementById('loading-message');
-                const loadingTime = document.getElementById('loading-time');
-                
-                // 設置當前時間
-                const now = new Date();
-                loadingTime.textContent = now.toTimeString().substring(0, 8);
-                
-                // 顯示加載消息
-                loadingMessage.style.display = 'block';
-                
-                // 滾動到底部
-                const chatMessages = document.getElementById('chat-messages');
-                setTimeout(() => {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }, 100);
-            }
+                if (loadingMessage) {
+                    // 设置当前时间
+                    const now = new Date();
+                    document.getElementById('loading-time').textContent = now.getHours().toString().padStart(2, '0') + ':' + 
+                                                                         now.getMinutes().toString().padStart(2, '0') + ':' + 
+                                                                         now.getSeconds().toString().padStart(2, '0');
+                    
+                    loadingMessage.style.display = 'block';
+                    
+                    // 滾動到底部
+                    const chatMessages = document.getElementById('chat-messages');
+                    setTimeout(() => {
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }, 100);
+                }
+            });
         });
         
         // 添加加载动画

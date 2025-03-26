@@ -86,6 +86,10 @@ def init_conversation(instruction="simple_explain"):
         system_prompt = "請用繁體中文提供一個能在N分鐘內用紙筆和視覺估算解決數學問題的快捷方法。原則是：計算越少、數字越簡單、公式越少且越簡單越好。如果代入數字或使用視覺猜測更簡單，請採用這種方法。"
     elif instruction == "variant_question":
         system_prompt = "請用繁體中文設計一個變體題目，讓我可以練習使用相同的解題方法。"
+    elif instruction == "concept_explanation":
+        system_prompt = "如果你是題目出題者，你希望在這個問題中測試哪些特定的數學概念？請用繁體中文回答。"
+    elif instruction == "pattern_recognition":
+        system_prompt = "在未來的題目中，應該具備哪些特徵才能應用這種特定的解題方法？請用繁體中文回答。"
     
     return [
         {"role": "system", "content": system_prompt}
