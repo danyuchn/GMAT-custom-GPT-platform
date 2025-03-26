@@ -5,106 +5,330 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GMAT Quant 解題助手</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #7209b7;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --user-msg-color: #e7f5ff;
+            --ai-msg-color: #f0f7ff;
+            --system-msg-color: #fff8e6;
+        }
+        
         body {
-            background-color: #f8f9fa;
-            padding: 20px;
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
+        
+        .chat-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
         .chat-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 1000px;
+            margin: 20px auto;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        
+        .chat-body {
             padding: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
         }
+        
         .message {
-            margin-bottom: 15px;
-            padding: 10px 15px;
-            border-radius: 10px;
-        }
-        .user-message {
-            background-color: #e9f5ff;
-            margin-right: 20%;
-        }
-        .assistant-message {
-            background-color: #f0f0f0;
-            margin-left: 20%;
-        }
-        .system-message {
-            background-color: #fff3cd;
-            margin: 10px 10%;
-            font-style: italic;
-        }
-        .chat-input {
-            margin-top: 20px;
-        }
-        .nav-buttons {
             margin-bottom: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message-content {
+            padding: 15px;
+            border-radius: 15px;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .user-message .message-content {
+            background-color: var(--user-msg-color);
+            margin-left: 60px;
+            margin-right: 20px;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .assistant-message .message-content {
+            background-color: var(--ai-msg-color);
+            margin-right: 60px;
+            margin-left: 20px;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .system-message .message-content {
+            background-color: var(--system-msg-color);
+            margin: 10px 40px;
+            text-align: center;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .user-message .message-avatar {
+            left: -50px;
+            background-color: var(--primary-color);
+        }
+        
+        .assistant-message .message-avatar {
+            right: -50px;
+            background-color: var(--accent-color);
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .message-sender {
+            font-weight: 600;
+        }
+        
+        .message-time {
+            color: #6c757d;
+        }
+        
+        .message-body {
+            line-height: 1.5;
+        }
+        
+        .message-footer {
+            margin-top: 10px;
+            font-size: 0.75rem;
+            color: #6c757d;
+            text-align: right;
+        }
+        
+        .chat-input-container {
+            padding: 20px;
+            background-color: white;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .chat-form {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-floating {
+            margin-bottom: 15px;
+        }
+        
+        .chat-textarea {
+            resize: none;
+            border-radius: 10px;
+            border: 1px solid #ced4da;
+            padding: 15px;
+            font-size: 1rem;
+            min-height: 100px;
+        }
+        
+        .chat-textarea:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+        }
+        
+        .chat-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn-send {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 10px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-send:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .btn-send:active {
+            transform: translateY(0);
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+        
+        .nav-buttons .btn {
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-weight: 500;
+        }
+        
+        .footer {
+            margin-top: auto;
+            background-color: var(--dark-color);
+            color: white;
+            padding: 15px 0;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="nav-buttons d-flex justify-content-between">
-            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">返回首頁</a>
-            <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">聊天歷史</a>
+    <header class="chat-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h4 m-0"><i class="fas fa-calculator me-2"></i>GMAT Quant 解題助手</h1>
+                <div>
+                    <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-light me-2"><i class="fas fa-home me-1"></i>首頁</a>
+                    <a href="{{ url_for('history') }}" class="btn btn-sm btn-outline-light"><i class="fas fa-history me-1"></i>歷史</a>
+                </div>
+            </div>
         </div>
-        
+    </header>
+
+    <div class="container my-4 flex-grow-1 d-flex flex-column">
         <div class="chat-container">
-            <h2 class="mb-4 text-center">GMAT Quant 解題助手</h2>
-            
-            <div class="messages">
+            <div class="chat-body" id="chat-messages">
                 {% for message in messages %}
                     {% if message.role == 'user' %}
                         <div class="message user-message">
-                            <div class="d-flex justify-content-between">
-                                <strong>您</strong>
-                                <small>{{ message.timestamp.strftime('%H:%M:%S') }}</small>
+                            <div class="message-content">
+                                <div class="message-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="message-header">
+                                    <span class="message-sender">您</span>
+                                    <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') }}</span>
+                                </div>
+                                <div class="message-body">{{ message.content }}</div>
                             </div>
-                            <div>{{ message.content }}</div>
                         </div>
                     {% elif message.role == 'assistant' %}
                         <div class="message assistant-message">
-                            <div class="d-flex justify-content-between">
-                                <strong>AI助手</strong>
-                                <small>{{ message.timestamp.strftime('%H:%M:%S') }}</small>
-                            </div>
-                            <div>{{ message.content|safe }}</div>
-                            {% if message.prompt_tokens or message.completion_tokens %}
-                                <div class="mt-2 text-muted small">
-                                    輸入: {{ message.prompt_tokens }} tokens | 
-                                    輸出: {{ message.completion_tokens }} tokens | 
-                                    成本: ${{ "%.6f"|format(message.cost) }}
+                            <div class="message-content">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
                                 </div>
-                            {% endif %}
+                                <div class="message-header">
+                                    <span class="message-sender">AI助手</span>
+                                    <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') }}</span>
+                                </div>
+                                <div class="message-body">{{ message.content|safe }}</div>
+                                {% if message.prompt_tokens or message.completion_tokens %}
+                                    <div class="message-footer">
+                                        <span><i class="fas fa-exchange-alt me-1"></i>輸入: {{ message.prompt_tokens }} tokens</span> | 
+                                        <span><i class="fas fa-reply me-1"></i>輸出: {{ message.completion_tokens }} tokens</span> | 
+                                        <span><i class="fas fa-dollar-sign me-1"></i>成本: ${{ "%.6f"|format(message.cost) }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     {% elif message.role == 'system' %}
                         <div class="message system-message">
-                            <div><strong>系統提示:</strong> {{ message.content }}</div>
+                            <div class="message-content">
+                                <div class="message-body">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <strong>系統提示:</strong> {{ message.content }}
+                                </div>
+                            </div>
                         </div>
                     {% endif %}
                 {% endfor %}
             </div>
             
-            <form method="POST" class="chat-input">
-                <div class="mb-3">
-                    <label for="instruction" class="form-label">解題模式</label>
-                    <select class="form-select" id="instruction" name="instruction">
-                        <option value="simple_explain">簡單解釋</option>
-                        <option value="quick_solve">快速解法</option>
-                        <option value="variant_question">變體題目</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="user_input" class="form-label">您的問題</label>
-                    <textarea class="form-control" id="user_input" name="user_input" rows="4" placeholder="請輸入您的GMAT數學問題..." required></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">發送</button>
-            </form>
+            <div class="chat-input-container">
+                <form method="POST" class="chat-form">
+                    <div class="form-floating mb-3">
+                        <select class="form-select" id="instruction" name="instruction">
+                            <option value="simple_explain">簡單解釋</option>
+                            <option value="quick_solve">快速解法</option>
+                            <option value="variant_question">變體題目</option>
+                        </select>
+                        <label for="instruction">解題模式</label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <textarea class="form-control chat-textarea" id="user_input" name="user_input" rows="4" placeholder="請輸入您的GMAT數學問題..." required></textarea>
+                    </div>
+                    
+                    <div class="chat-controls">
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary me-2" onclick="clearInput()">
+                                <i class="fas fa-eraser me-1"></i>清除
+                            </button>
+                        </div>
+                        <button type="submit" class="btn btn-send">
+                            <i class="fas fa-paper-plane me-1"></i>發送
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="m-0">© 2023 GMAT智能解題助手 | 專為GMAT考生打造的AI解題平台</p>
+        </div>
+    </footer>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 页面加载完成后滚动到底部
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+        
+        // 清除输入框
+        function clearInput() {
+            document.getElementById('user_input').value = '';
+        }
+    </script>
 </body>
 </html>

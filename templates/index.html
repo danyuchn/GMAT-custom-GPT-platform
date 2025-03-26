@@ -5,64 +5,244 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GMAT 題目分類</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #7209b7;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
         body {
-            background-color: #f8f9fa;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        .btn-category {
-            width: 200px;
-            height: 200px;
-            margin: 20px;
-            font-size: 1.5rem;
+            background-color: var(--light-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            flex-direction: column;
         }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .hero-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .category-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .category-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+        
+        .card-header {
+            padding: 30px 20px;
+            text-align: center;
+            color: white;
+        }
+        
+        .quant-header {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+        }
+        
+        .verbal-header {
+            background: linear-gradient(135deg, #7209b7, #560bad);
+        }
+        
+        .graph-header {
+            background: linear-gradient(135deg, #f72585, #b5179e);
+        }
+        
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .card-body {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .card-text {
+            color: #6c757d;
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+        
+        .btn-start {
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn-start:hover {
+            transform: scale(1.05);
+        }
+        
         .user-info {
             position: absolute;
             top: 20px;
             right: 20px;
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .user-info .btn {
+            border-radius: 20px;
+            margin-left: 10px;
+            font-weight: 500;
+        }
+        
+        .alert-login {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .footer {
+            margin-top: auto;
+            background-color: var(--dark-color);
+            color: white;
+            padding: 20px 0;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="user-info">
         {% if current_user.is_authenticated %}
-            <span>歡迎, {{ current_user.username }}</span>
-            <a href="{{ url_for('history') }}" class="btn btn-sm btn-outline-secondary mx-2">聊天歷史</a>
+            <span><i class="fas fa-user-circle me-2"></i>{{ current_user.username }}</span>
+            <a href="{{ url_for('history') }}" class="btn btn-sm btn-outline-secondary mx-2"><i class="fas fa-history me-1"></i>聊天歷史</a>
             {% if current_user.username == 'admin' %}
-            <a href="{{ url_for('admin_chats') }}" class="btn btn-sm btn-outline-primary mx-2">管理後台</a>
+            <a href="{{ url_for('admin_chats') }}" class="btn btn-sm btn-outline-primary mx-2"><i class="fas fa-cog me-1"></i>管理後台</a>
             {% endif %}
-            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">登出</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger"><i class="fas fa-sign-out-alt me-1"></i>登出</a>
         {% else %}
-            <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-primary">登入</a>
-            <a href="{{ url_for('register') }}" class="btn btn-sm btn-outline-success">註冊</a>
+            <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-sign-in-alt me-1"></i>登入</a>
+            <a href="{{ url_for('register') }}" class="btn btn-sm btn-outline-success"><i class="fas fa-user-plus me-1"></i>註冊</a>
         {% endif %}
     </div>
 
-    <div class="container">
-        <h1 class="mb-5">GMAT 題目分類</h1>
-        
-        <div class="d-flex justify-content-center flex-wrap">
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('new_chat', category='quant') }}" class="btn btn-primary btn-category">Quant-related</a>
-                <a href="{{ url_for('new_chat', category='verbal') }}" class="btn btn-success btn-category">Verbal-related</a>
-                <a href="{{ url_for('new_chat', category='graph') }}" class="btn btn-warning btn-category">Graph-related</a>
-            {% else %}
-                <div class="alert alert-info">
-                    請先登入或註冊以開始使用解題助手。
-                </div>
-            {% endif %}
+    <section class="hero-section">
+        <div class="container">
+            <h1 class="hero-title">GMAT 智能解題助手</h1>
+            <p class="hero-subtitle">選擇您需要的題目類型，開始智能解題之旅</p>
         </div>
+    </section>
+
+    <div class="container mb-5">
+        {% if current_user.is_authenticated %}
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="category-card">
+                        <div class="card-header quant-header">
+                            <div class="card-icon"><i class="fas fa-calculator"></i></div>
+                        </div>
+                        <div class="card-body">
+                            <h3 class="card-title">Quant 數學</h3>
+                            <p class="card-text">解決GMAT數學問題，包括代數、幾何、統計等各類型題目。</p>
+                            <a href="{{ url_for('new_chat', category='quant') }}" class="btn btn-primary btn-start">開始解題</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="category-card">
+                        <div class="card-header verbal-header">
+                            <div class="card-icon"><i class="fas fa-book"></i></div>
+                        </div>
+                        <div class="card-body">
+                            <h3 class="card-title">Verbal 語文</h3>
+                            <p class="card-text">解決GMAT語文問題，包括閱讀理解、批判性推理和句子改錯。</p>
+                            <a href="{{ url_for('new_chat', category='verbal') }}" class="btn btn-success btn-start">開始解題</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="category-card">
+                        <div class="card-header graph-header">
+                            <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                        </div>
+                        <div class="card-body">
+                            <h3 class="card-title">Graph 圖表</h3>
+                            <p class="card-text">解決GMAT圖表問題，包括數據分析、圖表解讀和綜合推理。</p>
+                            <a href="{{ url_for('new_chat', category='graph') }}" class="btn btn-danger btn-start">開始解題</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert-login">
+                <i class="fas fa-lock mb-4" style="font-size: 3rem; color: var(--primary-color);"></i>
+                <h3 class="mb-3">請先登入或註冊</h3>
+                <p class="mb-4">登入後即可使用GMAT智能解題助手，獲取專業的解題指導。</p>
+                <div>
+                    <a href="{{ url_for('login') }}" class="btn btn-primary me-2"><i class="fas fa-sign-in-alt me-1"></i>登入</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-success"><i class="fas fa-user-plus me-1"></i>註冊</a>
+                </div>
+            </div>
+        {% endif %}
     </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>© 2023 GMAT智能解題助手 | 專為GMAT考生打造的AI解題平台</p>
+        </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-<!-- 删除文件末尾的注释代码 -->
