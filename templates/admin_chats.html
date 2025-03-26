@@ -1,108 +1,379 @@
-{% extends "base.html" %}
-
-{% block content %}
-<div class="admin-panel">
-    <h2><i class="fas fa-users-cog me-2"></i>管理员后台 - 聊天记录</h2>
-    
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h4 class="mb-3"><i class="fas fa-user-friends me-2"></i>选择用户</h4>
-            <div class="list-group">
-                {% for user in users %}
-                <a href="{{ url_for('admin_chats', user_id=user.id) }}" 
-                   class="list-group-item list-group-item-action {% if selected_user_id|int == user.id %}active{% endif %}">
-                    <i class="fas fa-user me-2"></i>{{ user.username }} <small class="text-muted">({{ user.email }})</small>
-                </a>
-                {% endfor %}
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GMAT 管理员后台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #7209b7;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 管理员后台头部样式 */
+        .admin-header {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            padding: 25px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .admin-header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .admin-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* 管理面板容器样式 */
+        .admin-container {
+            max-width: 1200px;
+            width: 90%;
+            margin: 20px auto;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 30px;
+            flex-grow: 1;
+        }
+        
+        /* 用户列表样式 */
+        .user-list {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .user-list-header {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
+            font-weight: 600;
+        }
+        
+        .user-list-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s ease;
+        }
+        
+        .user-list-item:last-child {
+            border-bottom: none;
+            border-radius: 0 0 10px 10px;
+        }
+        
+        .user-list-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .user-list-item.active {
+            background-color: #e7f5ff;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        /* 聊天记录列表样式 */
+        .chat-list {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .chat-list-header {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
+            font-weight: 600;
+        }
+        
+        .chat-list-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s ease;
+        }
+        
+        .chat-list-item:last-child {
+            border-bottom: none;
+            border-radius: 0 0 10px 10px;
+        }
+        
+        .chat-list-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* 按钮样式 */
+        .btn-admin {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-admin:hover {
+            background: linear-gradient(135deg, #3a5a9f, #2a0b73);
+            transform: translateY(-2px);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #e63946, #d62828);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #d62828, #c71f37);
+            transform: translateY(-2px);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #5a6268, #343a40);
+            transform: translateY(-2px);
+            color: white;
+        }
+        
+        /* 复选框样式 */
+        .form-check-input {
+            width: 1.2em;
+            height: 1.2em;
+            margin-top: 0.25em;
+            cursor: pointer;
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .form-check-label {
+            cursor: pointer;
+        }
+        
+        /* 页脚样式 */
+        .footer {
+            margin-top: auto;
+            background-color: #212529;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .admin-container {
+                width: 95%;
+                padding: 20px;
+            }
+            
+            .admin-header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .admin-header p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 管理员后台头部 -->
+    <header class="admin-header">
+        <div class="container">
+            <h1><i class="fas fa-user-shield me-2"></i>GMAT 管理员后台</h1>
+            <p>管理用户聊天记录和系统设置</p>
+            <div class="mt-3">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-light me-2"><i class="fas fa-home me-1"></i>首页</a>
+                <!-- 移除不存在的admin_settings路由链接 -->
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light ms-2"><i class="fas fa-sign-out-alt me-1"></i>登出</a>
             </div>
         </div>
-        
-        <div class="col-md-6">
-            {% if selected_user_id %}
-                <h4 class="mb-3"><i class="fas fa-comments me-2"></i>聊天记录列表</h4>
-                {% if chats %}
-                    <form action="{{ url_for('delete_chats') }}" method="post" id="delete-form">
-                        <input type="hidden" name="user_id" value="{{ selected_user_id }}">
-                        
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-danger" id="delete-selected">
-                                <i class="fas fa-trash-alt me-1"></i>删除选中
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="select-all">
-                                <i class="fas fa-check-square me-1"></i>全选
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="deselect-all">
-                                <i class="fas fa-square me-1"></i>取消全选
-                            </button>
+    </header>
+
+    <div class="container my-4 flex-grow-1">
+        <div class="admin-container">
+            <h2 class="mb-4"><i class="fas fa-comments me-2"></i>聊天记录管理</h2>
+            
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="user-list">
+                        <div class="user-list-header">
+                            <i class="fas fa-users me-2"></i>用户列表
                         </div>
-                        
-                        <div class="list-group">
-                            {% for chat in chats %}
-                            <div class="list-group-item">
-                                <div class="form-check">
-                                    <input class="form-check-input chat-checkbox" type="checkbox" name="chat_ids" value="{{ chat.id }}" id="chat-{{ chat.id }}">
-                                    <label class="form-check-label" for="chat-{{ chat.id }}">
-                                        <a href="{{ url_for('admin_chat_detail', chat_id=chat.id) }}" class="text-decoration-none">
-                                            {% if chat.category == 'quant' %}
-                                                <i class="fas fa-calculator me-1 text-primary"></i>
-                                            {% elif chat.category == 'verbal' %}
-                                                <i class="fas fa-book me-1 text-success"></i>
-                                            {% elif chat.category == 'graph' %}
-                                                <i class="fas fa-chart-line me-1 text-info"></i>
-                                            {% endif %}
-                                            {{ chat.category }} - {{ chat.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
-                                        </a>
-                                    </label>
-                                </div>
+                        {% for user in users %}
+                        <a href="{{ url_for('admin_chats', user_id=user.id) }}" class="text-decoration-none">
+                            <div class="user-list-item {% if selected_user_id|int == user.id %}active{% endif %}">
+                                <i class="fas fa-user me-2"></i>
+                                <strong>{{ user.username }}</strong>
+                                <small class="text-muted ms-2">({{ user.email }})</small>
                             </div>
-                            {% endfor %}
-                        </div>
-                    </form>
-                {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>该用户没有聊天记录或所有聊天记录为空
+                        </a>
+                        {% endfor %}
                     </div>
-                {% endif %}
+                </div>
                 
-                <div class="mt-4">
-                    <a href="{{ url_for('analyze_user_questions', user_id=selected_user_id) }}" class="btn btn-primary">
-                        <i class="fas fa-chart-pie me-1"></i>分析该用户问题
-                    </a>
+                <div class="col-md-7">
+                    {% if selected_user_id %}
+                        <div class="chat-list">
+                            <div class="chat-list-header">
+                                <i class="fas fa-history me-2"></i>聊天记录列表
+                            </div>
+                            
+                            {% if chats %}
+                                <form action="{{ url_for('delete_chats') }}" method="post" id="delete-form">
+                                    <input type="hidden" name="user_id" value="{{ selected_user_id }}">
+                                    
+                                    <div class="p-3 border-bottom">
+                                        <button type="submit" class="btn btn-danger" id="delete-selected">
+                                            <i class="fas fa-trash-alt me-1"></i>删除选中
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" id="select-all">
+                                            <i class="fas fa-check-square me-1"></i>全选
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" id="deselect-all">
+                                            <i class="fas fa-square me-1"></i>取消全选
+                                        </button>
+                                    </div>
+                                    
+                                    {% for chat in chats %}
+                                    <div class="chat-list-item">
+                                        <div class="form-check">
+                                            <input class="form-check-input chat-checkbox" type="checkbox" name="chat_ids" value="{{ chat.id }}" id="chat-{{ chat.id }}">
+                                            <label class="form-check-label" for="chat-{{ chat.id }}">
+                                                <a href="{{ url_for('admin_chat_detail', chat_id=chat.id) }}" class="text-decoration-none">
+                                                    {% if chat.category == 'quant' %}
+                                                        <i class="fas fa-calculator me-1 text-primary"></i>
+                                                    {% elif chat.category == 'verbal' %}
+                                                        <i class="fas fa-book me-1 text-success"></i>
+                                                    {% elif chat.category == 'graph' %}
+                                                        <i class="fas fa-chart-line me-1 text-info"></i>
+                                                    {% else %}
+                                                        <i class="fas fa-comment me-1 text-secondary"></i>
+                                                    {% endif %}
+                                                    <span class="fw-bold">{{ chat.category }}</span> - 
+                                                    <span class="text-muted">{{ chat.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                                                </a>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </form>
+                            {% else %}
+                                <div class="p-4 text-center">
+                                    <i class="fas fa-info-circle me-2 text-info"></i>
+                                    该用户没有聊天记录或所有聊天记录为空
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-4">
+                            <a href="{{ url_for('analyze_user_questions', user_id=selected_user_id) }}" class="btn btn-admin">
+                                <i class="fas fa-chart-pie me-1"></i>分析该用户问题
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            请从左侧选择一个用户查看其聊天记录
+                        </div>
+                    {% endif %}
                 </div>
-            {% else %}
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>请选择一个用户查看其聊天记录
-                </div>
-            {% endif %}
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-    document.getElementById('select-all').addEventListener('click', function() {
-        document.querySelectorAll('.chat-checkbox').forEach(function(checkbox) {
-            checkbox.checked = true;
-        });
-    });
+    <footer class="footer">
+        <div class="container">
+            <p class="m-0">© 2023 GMAT智能助手 | 管理员后台</p>
+        </div>
+    </footer>
     
-    document.getElementById('deselect-all').addEventListener('click', function() {
-        document.querySelectorAll('.chat-checkbox').forEach(function(checkbox) {
-            checkbox.checked = false;
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 全选按钮
+            const selectAllBtn = document.getElementById('select-all');
+            if (selectAllBtn) {
+                selectAllBtn.addEventListener('click', function() {
+                    document.querySelectorAll('.chat-checkbox').forEach(function(checkbox) {
+                        checkbox.checked = true;
+                    });
+                });
+            }
+            
+            // 取消全选按钮
+            const deselectAllBtn = document.getElementById('deselect-all');
+            if (deselectAllBtn) {
+                deselectAllBtn.addEventListener('click', function() {
+                    document.querySelectorAll('.chat-checkbox').forEach(function(checkbox) {
+                        checkbox.checked = false;
+                    });
+                });
+            }
+            
+            // 删除表单提交验证
+            const deleteForm = document.getElementById('delete-form');
+            if (deleteForm) {
+                deleteForm.addEventListener('submit', function(e) {
+                    const checkedBoxes = document.querySelectorAll('.chat-checkbox:checked');
+                    if (checkedBoxes.length === 0) {
+                        e.preventDefault();
+                        alert('请至少选择一条聊天记录');
+                        return false;
+                    }
+                    
+                    if (!confirm('确定要删除选中的 ' + checkedBoxes.length + ' 条聊天记录吗？此操作不可恢复！')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+            }
         });
-    });
-    
-    document.getElementById('delete-form').addEventListener('submit', function(e) {
-        const checkedBoxes = document.querySelectorAll('.chat-checkbox:checked');
-        if (checkedBoxes.length === 0) {
-            e.preventDefault();
-            alert('请至少选择一条聊天记录');
-            return false;
-        }
-        
-        if (!confirm('确定要删除选中的 ' + checkedBoxes.length + ' 条聊天记录吗？此操作不可恢复！')) {
-            e.preventDefault();
-            return false;
-        }
-    });
-</script>
-{% endblock %}
+    </script>
+</body>
+</html>
