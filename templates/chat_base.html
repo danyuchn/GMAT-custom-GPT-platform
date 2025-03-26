@@ -297,14 +297,6 @@
                                 </div>
                             </div>
                         </div>
-                    {% elif message.role == 'system' %}
-                        <div class="message system-message">
-                            <div class="message-content">
-                                <div class="message-body">
-                                    <i class="fas fa-info-circle me-1"></i>系統提示: {{ message.content|safe }}
-                                </div>
-                            </div>
-                        </div>
                     {% endif %}
                 {% endfor %}
                 
@@ -352,10 +344,15 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 用於追蹤用戶是否正在查看歷史消息
+        let userIsScrollingUp = false;
+        let lastScrollTop = 0;
+        
         // 页面加載完成後滾動到底部
         document.addEventListener('DOMContentLoaded', function() {
             const chatMessages = document.getElementById('chat-messages');
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            lastScrollTop = chatMessages.scrollTop;
             
             // 確保加載提示在頁面加載時是隱藏的
             const loadingMessage = document.getElementById('loading-message');
@@ -365,15 +362,29 @@
             
             // 監聽窗口大小變化，確保響應式佈局
             window.addEventListener('resize', function() {
-                adjustLayout();
+                adjustLayout(false); // 調整佈局但不強制滾動
             });
             
             // 初始調整佈局
-            adjustLayout();
+            adjustLayout(true); // 初始加載時滾動到底部
+            
+            // 添加滾動事件監聽器
+            chatMessages.addEventListener('scroll', function() {
+                // 檢測用戶是否向上滾動
+                if (chatMessages.scrollTop < lastScrollTop) {
+                    userIsScrollingUp = true;
+                } else if (chatMessages.scrollTop >= chatMessages.scrollHeight - chatMessages.clientHeight - 10) {
+                    // 用戶已滾動到底部或接近底部
+                    userIsScrollingUp = false;
+                }
+                
+                // 更新上次滾動位置
+                lastScrollTop = chatMessages.scrollTop;
+            });
         });
         
         // 調整佈局函數
-        function adjustLayout() {
+        function adjustLayout(scrollToBottom = false) {
             const chatMessages = document.getElementById('chat-messages');
             if (chatMessages) {
                 // 重新計算聊天容器高度
@@ -387,8 +398,10 @@
                     }
                 });
                 
-                // 滾動到底部
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                // 只有在需要時才滾動到底部，且用戶不是在查看歷史消息
+                if (scrollToBottom && !userIsScrollingUp) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
             }
         }
         
@@ -397,10 +410,28 @@
             document.getElementById('user-input').value = '';
         }
         
-        // 在接收到新消息後調整佈局
-        // 這裡使用 MutationObserver 監聽聊天容器的變化
+        // 完全禁用 MutationObserver 的自動滾動
         const chatObserver = new MutationObserver(function(mutations) {
-            adjustLayout();
+            // 只調整佈局，不自動滾動
+            adjustLayout(false);
+            
+            // 檢查是否有新增的消息節點
+            let hasNewMessage = false;
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.classList && 
+                        (node.classList.contains('user-message') || 
+                         node.classList.contains('assistant-message'))) {
+                        hasNewMessage = true;
+                    }
+                });
+            });
+            
+            // 只有在添加新消息且用戶不是在查看歷史消息時才滾動
+            if (hasNewMessage && !userIsScrollingUp) {
+                const chatMessages = document.getElementById('chat-messages');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
         });
         
         // 開始觀察聊天容器
@@ -432,14 +463,17 @@
             const form = document.querySelector('.chat-form');
             
             form.addEventListener('submit', function(event) {
+                // 表單提交時重置滾動狀態，因為用戶希望看到新消息
+                userIsScrollingUp = false;
+                
                 // 显示加载消息
                 const loadingMessage = document.getElementById('loading-message');
                 if (loadingMessage) {
                     // 设置当前时间
                     const now = new Date();
                     document.getElementById('loading-time').textContent = now.getHours().toString().padStart(2, '0') + ':' + 
-                                                                         now.getMinutes().toString().padStart(2, '0') + ':' + 
-                                                                         now.getSeconds().toString().padStart(2, '0');
+                                                                     now.getMinutes().toString().padStart(2, '0') + ':' + 
+                                                                     now.getSeconds().toString().padStart(2, '0');
                     
                     loadingMessage.style.display = 'block';
                     
@@ -447,6 +481,7 @@
                     const chatMessages = document.getElementById('chat-messages');
                     setTimeout(() => {
                         chatMessages.scrollTop = chatMessages.scrollHeight;
+                        lastScrollTop = chatMessages.scrollTop;
                     }, 100);
                 }
             });
@@ -523,3 +558,11 @@
     }
 </style>
 {% endif %}
+
+<style>
+    /* 在現有樣式中添加 */
+    .message-body {
+        white-space: pre-wrap;  /* 保留換行和空格 */
+        word-wrap: break-word;  /* 確保長文本會換行 */
+    }
+</style>
