@@ -734,7 +734,7 @@ def graph_chat():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-        print(f"已创建数据表: {db.Model.metadata.tables.keys()}")
+        print(f"已創建數據表: {db.Model.metadata.tables.keys()}")
         
         # 测试代码放在这里
         app.config.update(
