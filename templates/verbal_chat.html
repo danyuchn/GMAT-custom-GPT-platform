@@ -54,37 +54,61 @@
         <div class="chat-container">
             <h2 class="mb-4 text-center">GMAT Verbal 解題助手</h2>
             
-            <div class="messages">
+            <div class="chat-body" id="chat-messages">
                 {% for message in messages %}
                     {% if message.role == 'user' %}
                         <div class="message user-message">
-                            <div class="d-flex justify-content-between">
-                                <strong>您</strong>
-                                <small>{{ message.timestamp.strftime('%H:%M:%S') }}</small>
+                            <div class="message-content">
+                                <div class="message-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="message-header">
+                                    <span class="message-sender">您</span>
+                                    <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') }}</span>
+                                </div>
+                                <div class="message-body">{{ message.content }}</div>
                             </div>
-                            <div>{{ message.content }}</div>
                         </div>
                     {% elif message.role == 'assistant' %}
                         <div class="message assistant-message">
-                            <div class="d-flex justify-content-between">
-                                <strong>AI助手</strong>
-                                <small>{{ message.timestamp.strftime('%H:%M:%S') }}</small>
-                            </div>
-                            <div>{{ message.content|safe }}</div>
-                            {% if message.prompt_tokens or message.completion_tokens %}
-                                <div class="mt-2 text-muted small">
-                                    輸入: {{ message.prompt_tokens }} tokens | 
-                                    輸出: {{ message.completion_tokens }} tokens | 
-                                    成本: ${{ "%.6f"|format(message.cost) }}
+                            <div class="message-content">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
                                 </div>
-                            {% endif %}
+                                <div class="message-header">
+                                    <span class="message-sender">AI助手</span>
+                                    <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') }}</span>
+                                </div>
+                                <div class="message-body">{{ message.content|safe }}</div>
+                                {% if message.prompt_tokens or message.completion_tokens %}
+                                    <div class="message-footer">
+                                        <span><i class="fas fa-exchange-alt me-1"></i>輸入: {{ message.prompt_tokens }} tokens</span> | 
+                                        <span><i class="fas fa-reply me-1"></i>輸出: {{ message.completion_tokens }} tokens</span> | 
+                                        <span><i class="fas fa-dollar-sign me-1"></i>成本: ${{ "%.6f"|format(message.cost) }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     {% elif message.role == 'system' %}
-                        <div class="message system-message">
-                            <div><strong>系統提示:</strong> {{ message.content }}</div>
-                        </div>
+                        <!-- 移除系統消息顯示 -->
                     {% endif %}
                 {% endfor %}
+                
+                <!-- 添加加載提示 -->
+                <div class="message assistant-message loading-message" id="loading-message">
+                    <div class="message-content">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-header">
+                            <span class="message-sender">AI助手</span>
+                            <span class="message-time" id="loading-time"></span>
+                        </div>
+                        <div class="message-body">
+                            <i class="fas fa-spinner fa-spin me-2"></i>等待模型思考回應中<span class="loading-dots"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <form method="POST" class="chat-input">
@@ -106,5 +130,46 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 頁面加載完成後滾動到底部
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // 確保加載提示在頁面加載時是隱藏的
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) {
+                loadingMessage.style.display = 'none';
+            }
+        });
+        
+        // 清除輸入框
+        function clearInput() {
+            document.getElementById('user_input').value = '';
+        }
+        
+        // 顯示加載消息
+        document.querySelector('form').addEventListener('submit', function(event) {
+            // 檢查是否有輸入內容
+            const userInput = document.getElementById('user_input').value.trim();
+            if (userInput) {
+                const loadingMessage = document.getElementById('loading-message');
+                const loadingTime = document.getElementById('loading-time');
+                
+                // 設置當前時間
+                const now = new Date();
+                loadingTime.textContent = now.toTimeString().substring(0, 8);
+                
+                // 顯示加載消息
+                loadingMessage.style.display = 'block';
+                
+                // 滾動到底部
+                const chatMessages = document.getElementById('chat-messages');
+                setTimeout(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 100);
+            }
+        });
+    </script>
 </body>
 </html>
