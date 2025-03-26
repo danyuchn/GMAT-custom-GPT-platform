@@ -160,34 +160,25 @@ def register():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # 检查用户是否已登录
     if current_user.is_authenticated:
-        return redirect(url_for("index"))
-        
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        next_url = request.form.get("next", "")
+        return redirect(url_for('index'))  # 已登入用戶重定向到首頁
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
         
         user = User.query.filter_by(username=username).first()
         
         if user and check_password_hash(user.password, password):
-            # 登录用户并设置"记住我"选项
-            login_user(user, remember=True)
+            login_user(user)
+            next_page = request.args.get('next')
             
-            # 添加会话初始化逻辑
-            session.pop('active_chat_id', None)  # 清除旧会话
-            session.permanent = True  # 设置会话为永久
-            
-            # 处理重定向
-            if next_url and next_url.startswith('/'):
-                return redirect(next_url)
-            return redirect(url_for("new_chat", category="quant"))
+            # 修改這裡：登入成功後重定向到首頁，而不是 quant_chat
+            return redirect(next_page or url_for('index'))
         else:
-            flash("登入失敗，請檢查用戶名和密碼", "danger")
-            app.logger.warning(f"登录失败尝试: {username}")
+            flash('登入失敗，請檢查用戶名和密碼', 'danger')
     
-    return render_template("login.html")
+    return render_template('login.html')
 
 @app.route("/new_chat/<category>")
 @login_required
