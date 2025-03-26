@@ -488,10 +488,69 @@ def graph_chat():
     return handle_chat("graph", "graph_chat.html")
 
 # 添加工具頁面路由
-@app.route('/quant_tool')
+@app.route('/quant_tool', methods=['GET', 'POST'])
 @login_required
 def quant_tool():
-    return render_template('quant_tool.html')
+    if request.method == 'POST':
+        user_input = request.form.get('user_input')
+        instruction = request.form.get('instruction')
+        
+        # 使用工具 API 處理請求
+        from tools_api import process_tool_request
+        result = process_tool_request(instruction, user_input)
+        
+        # 創建新的消息
+        timestamp = datetime.now()
+        
+        # 用戶消息 - 移除 user_id 參數
+        user_message = Message(
+            role='user',
+            content=user_input,
+            timestamp=timestamp,
+            chat_id=session.get('chat_id')
+        )
+        
+        # AI 回應 - 移除 user_id 參數
+        if result['status'] == 'success':
+            ai_content = result['content']
+        else:
+            ai_content = f"處理請求時發生錯誤: {result['message']}"
+            
+        ai_message = Message(
+            role='assistant',
+            content=ai_content,
+            timestamp=timestamp,
+            chat_id=session.get('chat_id')
+        )
+        
+        # 保存消息
+        db.session.add(user_message)
+        db.session.add(ai_message)
+        db.session.commit()
+        
+        # 獲取更新後的消息列表
+        messages = Message.query.filter_by(chat_id=session.get('chat_id')).order_by(Message.timestamp).all()
+        return render_template('quant_tool.html', messages=messages)
+    
+    # GET 請求處理
+    chat_id = request.args.get('chat_id')
+    if chat_id:
+        session['chat_id'] = chat_id
+        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+    else:
+        # 創建新的聊天
+        # 使用正確的字段，不使用 title 或 name
+        new_chat = Chat(
+            user_id=current_user.id,
+            category="quant_tool"
+        )
+        db.session.add(new_chat)
+        db.session.commit()
+        
+        session['chat_id'] = new_chat.id
+        messages = []
+    
+    return render_template('quant_tool.html', messages=messages)
 
 @app.route('/verbal_tool')
 @login_required
