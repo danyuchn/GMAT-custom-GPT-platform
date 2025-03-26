@@ -487,6 +487,22 @@ def verbal_chat():
 def graph_chat():
     return handle_chat("graph", "graph_chat.html")
 
+# 添加工具頁面路由
+@app.route('/quant_tool')
+@login_required
+def quant_tool():
+    return render_template('quant_tool.html')
+
+@app.route('/verbal_tool')
+@login_required
+def verbal_tool():
+    return render_template('verbal_tool.html')
+
+@app.route('/core_tool')
+@login_required
+def core_tool():
+    return render_template('core_tool.html')
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
