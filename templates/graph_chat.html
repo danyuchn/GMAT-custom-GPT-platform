@@ -73,12 +73,31 @@
             flex-grow: 1;
             max-height: calc(100vh - 300px);
             overflow-y: auto;
+            overflow-x: hidden; /* 防止水平溢出 */
         }
         
         /* 修改消息样式，使其更加现代化 */
         .message {
             margin-bottom: 20px;
             animation: fadeIn 0.5s ease;
+            width: 100%; /* 確保消息寬度不超過容器 */
+            word-wrap: break-word; /* 確保長文本自動換行 */
+        }
+        
+        /* 確保消息內容自適應 */
+        .message-body {
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+            max-width: 100%;
+        }
+        
+        /* 確保代碼塊不會破壞佈局 */
+        .message-body pre, .message-body code {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-width: 100%;
+            overflow-x: auto;
         }
         
         @keyframes fadeIn {
@@ -328,7 +347,47 @@
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
             });
+            
+            // 监听窗口大小变化，确保响应式布局
+            window.addEventListener('resize', function() {
+                adjustLayout();
+            });
+            
+            // 初始调整布局
+            adjustLayout();
         });
+        
+        // 调整布局函数
+        function adjustLayout() {
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages) {
+                // 重新计算聊天容器高度
+                chatMessages.style.maxHeight = `calc(100vh - ${300 + (window.innerWidth <= 768 ? 50 : 0)}px)`;
+                
+                // 确保所有消息内容适应容器宽度
+                const messageContents = document.querySelectorAll('.message-content');
+                messageContents.forEach(content => {
+                    if (content.offsetWidth > chatMessages.offsetWidth - 60) {
+                        content.style.width = `${chatMessages.offsetWidth - 80}px`;
+                    }
+                });
+                
+                // 滚动到底部
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+        
+        // 在接收到新消息后调整布局
+        // 这里使用 MutationObserver 监听聊天容器的变化
+        const chatObserver = new MutationObserver(function(mutations) {
+            adjustLayout();
+        });
+        
+        // 开始观察聊天容器
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+            chatObserver.observe(chatMessages, { childList: true, subtree: true });
+        }
         
         // 选择解题模式
         function selectMode(mode) {

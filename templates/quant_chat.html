@@ -73,12 +73,31 @@
             flex-grow: 1;
             max-height: calc(100vh - 300px);
             overflow-y: auto;
+            overflow-x: hidden; /* 防止水平溢出 */
         }
         
         /* 修改消息样式，使其更加现代化 */
         .message {
             margin-bottom: 20px;
             animation: fadeIn 0.5s ease;
+            width: 100%; /* 確保消息寬度不超過容器 */
+            word-wrap: break-word; /* 確保長文本自動換行 */
+        }
+        
+        /* 確保消息內容自適應 */
+        .message-body {
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+            max-width: 100%;
+        }
+        
+        /* 確保代碼塊不會破壞佈局 */
+        .message-body pre, .message-body code {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-width: 100%;
+            overflow-x: auto;
         }
         
         @keyframes fadeIn {
@@ -402,11 +421,51 @@
             if (loadingMessage) {
                 loadingMessage.style.display = 'none';
             }
+            
+            // 監聽窗口大小變化，確保響應式佈局
+            window.addEventListener('resize', function() {
+                adjustLayout();
+            });
+            
+            // 初始調整佈局
+            adjustLayout();
         });
+        
+        // 調整佈局函數
+        function adjustLayout() {
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages) {
+                // 重新計算聊天容器高度
+                chatMessages.style.maxHeight = `calc(100vh - ${300 + (window.innerWidth <= 768 ? 50 : 0)}px)`;
+                
+                // 確保所有消息內容適應容器寬度
+                const messageContents = document.querySelectorAll('.message-content');
+                messageContents.forEach(content => {
+                    if (content.offsetWidth > chatMessages.offsetWidth - 60) {
+                        content.style.width = `${chatMessages.offsetWidth - 80}px`;
+                    }
+                });
+                
+                // 滾動到底部
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
         
         // 清除輸入框
         function clearInput() {
-            document.getElementById('user_input').value = '';
+            document.getElementById('user-input').value = '';
+        }
+        
+        // 在接收到新消息後調整佈局
+        // 這裡使用 MutationObserver 監聽聊天容器的變化
+        const chatObserver = new MutationObserver(function(mutations) {
+            adjustLayout();
+        });
+        
+        // 開始觀察聊天容器
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+            chatObserver.observe(chatMessages, { childList: true, subtree: true });
         }
         
         // 选择解题模式
