@@ -233,19 +233,46 @@
                 <h4>簡單解釋</h4>
                 <p>以高中生能理解的方式解釋解題步驟</p>
             </div>
-            <div class="theme-card" onclick="selectMode('quick_solve')">
+            
+            <!-- 新增五個解題模式卡片 -->
+            <div class="theme-card" onclick="selectMode('quick_solve_cr_tpa')">
                 <div class="theme-icon">
-                    <i class="fas fa-bolt"></i>
+                    <i class="fas fa-tachometer-alt"></i>
                 </div>
-                <h4>快速解法</h4>
-                <p>提供最快捷的解題方法，減少計算量</p>
+                <h4>快速解法(CR/TPA)</h4>
+                <p>2分鐘內快速解決批判性推理問題</p>
             </div>
-            <div class="theme-card" onclick="selectMode('variant_question')">
+            
+            <div class="theme-card" onclick="selectMode('quick_solve_rc')">
                 <div class="theme-icon">
-                    <i class="fas fa-random"></i>
+                    <i class="fas fa-book-reader"></i>
                 </div>
-                <h4>變體題目</h4>
-                <p>生成類似的練習題，鞏固解題方法</p>
+                <h4>快速解法(RC)</h4>
+                <p>6-8分鐘內解決閱讀理解問題</p>
+            </div>
+            
+            <div class="theme-card" onclick="selectMode('mind_map')">
+                <div class="theme-icon">
+                    <i class="fas fa-project-diagram"></i>
+                </div>
+                <h4>邏輯架構圖</h4>
+                <p>創建文章的思維導圖</p>
+            </div>
+            
+            <div class="theme-card" onclick="selectMode('approach_diagnosis')">
+                <div class="theme-icon">
+                    <i class="fas fa-stethoscope"></i>
+                </div>
+                <h4>解題思路診斷（beta）</h4>
+                <p>識別解題思路中的錯誤並提供改進建議</p>
+            </div>
+            
+            <div class="theme-card" onclick="selectMode('logical_term_explanation')">
+                <div class="theme-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <h4>邏輯名詞解釋</h4>
+                <p>解釋文章中的邏輯術語和關鍵詞</p>
             </div>
         </div>
         
@@ -283,26 +310,18 @@
                                 </div>
                             </div>
                         </div>
-                    {% elif message.role == 'system' %}
-                        <div class="message system-message">
-                            <div class="message-content">
-                                <div class="message-body">
-                                    <i class="fas fa-info-circle me-1"></i>系統提示: {{ message.content|safe }}
-                                </div>
-                            </div>
-                        </div>
                     {% endif %}
                 {% endfor %}
             </div>
             
             <div class="chat-input-container">
-                <form method="POST" id="chat-form">
+                <form method="POST" id="chat-form" class="chat-form">
                     <input type="hidden" name="instruction" id="instruction" value="simple_explain">
                     <div class="mb-3">
                         <textarea class="form-control" id="user-input" name="user_input" rows="3" placeholder="請輸入您的GMAT語文問題..." required></textarea>
                     </div>
                     <div class="d-flex justify-content-between">
-                        <button type="button" class="btn btn-secondary" id="clear-btn">
+                        <button type="button" class="btn btn-secondary" id="clear-btn" onclick="clearInput()">
                             <i class="fas fa-eraser me-1"></i>清除
                         </button>
                         <button type="submit" class="btn btn-send">
@@ -317,39 +336,74 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 页面加載完成後滾動到底部
         document.addEventListener('DOMContentLoaded', function() {
-            // 滚动到最新消息
             const chatMessages = document.getElementById('chat-messages');
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
-            // 清除按钮功能
-            const clearBtn = document.getElementById('clear-btn');
-            const userInput = document.getElementById('user-input');
-            
-            clearBtn.addEventListener('click', function() {
-                userInput.value = '';
-                userInput.focus();
-            });
-            
-            // 自动调整文本区域高度
-            userInput.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = (this.scrollHeight) + 'px';
-            });
+            // 確保加載提示在頁面加載時是隱藏的
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) {
+                loadingMessage.style.display = 'none';
+            }
         });
+        
+        // 清除輸入框
+        function clearInput() {
+            document.getElementById('user_input').value = '';
+        }
         
         // 选择解题模式
         function selectMode(mode) {
-            const themeCards = document.querySelectorAll('.theme-card');
-            const instructionInput = document.getElementById('instruction');
+            // 更新隐藏字段的值
+            document.getElementById('instruction').value = mode;
             
-            themeCards.forEach(card => {
+            // 更新卡片样式
+            const cards = document.querySelectorAll('.theme-card');
+            cards.forEach(card => {
                 card.classList.remove('active');
             });
             
-            event.currentTarget.classList.add('active');
-            instructionInput.value = mode;
+            // 找到并激活选中的卡片
+            const selectedCard = document.querySelector(`.theme-card[onclick="selectMode('${mode}')"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('active');
+            }
         }
+        
+        // 在表单提交前处理
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('.chat-form');
+            
+            form.addEventListener('submit', function(event) {
+                // 显示加载消息
+                const loadingMessage = document.getElementById('loading-message');
+                if (loadingMessage) {
+                    // 设置当前时间
+                    const now = new Date();
+                    document.getElementById('loading-time').textContent = now.getHours().toString().padStart(2, '0') + ':' + 
+                                                                         now.getMinutes().toString().padStart(2, '0') + ':' + 
+                                                                         now.getSeconds().toString().padStart(2, '0');
+                    
+                    loadingMessage.style.display = 'block';
+                    
+                    // 滾動到底部
+                    const chatMessages = document.getElementById('chat-messages');
+                    setTimeout(() => {
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }, 100);
+                }
+            });
+        });
+        
+        // 添加加载动画
+        const loadingDots = document.querySelector('.loading-dots');
+        let dotCount = 0;
+        
+        setInterval(() => {
+            dotCount = (dotCount + 1) % 4;
+            loadingDots.textContent = '.'.repeat(dotCount);
+        }, 500);
     </script>
 </body>
 </html>

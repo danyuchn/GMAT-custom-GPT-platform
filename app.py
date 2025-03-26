@@ -90,6 +90,17 @@ def init_conversation(instruction="simple_explain"):
         system_prompt = "如果你是題目出題者，你希望在這個問題中測試哪些特定的數學概念？請用繁體中文回答。"
     elif instruction == "pattern_recognition":
         system_prompt = "在未來的題目中，應該具備哪些特徵才能應用這種特定的解題方法？請用繁體中文回答。"
+    # 添加新的指令類型
+    elif instruction == "quick_solve_cr_tpa":
+        system_prompt = "請用繁體中文提供一個能在2分鐘內解決問題的快捷方法。原則如下：\n1. 首先，閱讀問題並識別解鎖問題的關鍵要素。\n2. 接著，告訴我文章中哪些部分是相關信息，哪些不是。\n3. 然後，指出是使用預寫（預先草擬答案）策略還是排除策略來回答問題。\n每個步驟必須包含引導到下一步的明確提示，並遵循線性、單向的人類思維過程。"
+    elif instruction == "quick_solve_rc":
+        system_prompt = "請用繁體中文提供一個能在6-8分鐘內快速解決問題的方法。該方法應遵循以下步驟：\n1. 首先，識別文章中需要注意的關鍵信息（注意：即使不清楚問題可能測試什麼，也應該這樣做）。\n2. 接著，為每個問題指定關鍵詞和要點。\n3. 然後，根據這些關鍵詞和要點，指出文章中哪些相關段落是相關的。\n4. 之後，建議是使用預寫策略還是排除策略來回答問題。\n5. 如果選擇預寫，請詳細說明逐步推理過程。\n每個步驟必須提供引導到下一步的明確線索，並且必須遵循線性、單向的思維過程。此外，請為每個選項的判斷提供詳細解釋。"
+    elif instruction == "mind_map":
+        system_prompt = "請用繁體中文創建文章本身的思維導圖。"
+    elif instruction == "approach_diagnosis":
+        system_prompt = "這是我對問題解決過程的語言解釋。請用繁體中文識別我的方法中的任何錯誤，並提出改進建議。"
+    elif instruction == "logical_term_explanation":
+        system_prompt = "請用繁體中文解釋文章中提供的五個答案選項中每個邏輯術語的含義。"
     
     return [
         {"role": "system", "content": system_prompt}
