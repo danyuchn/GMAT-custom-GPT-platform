@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GMAT Quant 解題助手</title>
+    <title>{% block title %}GMAT 解題助手{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -146,13 +146,13 @@
         
         .theme-card {
             background-color: white;
-            border-radius: 10px;
-            padding: 15px;
-            width: 180px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            cursor: pointer;
-            transition: all 0.3s ease;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 20px;
             text-align: center;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            width: 200px;
         }
         
         .theme-card:hover {
@@ -166,9 +166,9 @@
         }
         
         .theme-icon {
-            font-size: 2rem;
-            color: #4361ee;
-            margin-bottom: 10px;
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
         }
         
         .theme-card h4 {
@@ -180,31 +180,6 @@
             margin: 0;
             font-size: 0.85rem;
             color: #6c757d;
-        }
-        
-        .theme-card {
-            background-color: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.3s ease;
-            cursor: pointer;
-            width: 200px;
-        }
-        
-        .theme-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .theme-card.active {
-            border: 2px solid var(--primary-color);
-        }
-        
-        .theme-icon {
-            font-size: 2.5rem;
-            color: var(--primary-color);
-            margin-bottom: 15px;
         }
         
         /* 修改输入区域样式 */
@@ -266,100 +241,26 @@
             }
         }
     </style>
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- 修改头部，使用与主页相同的风格 -->
     <header class="chat-header">
         <div class="container">
-            {% extends "chat_base.html" %}
-            
-            {% block title %}GMAT Quant 解題助手{% endblock %}
-            
-            {% block header_icon %}<i class="fas fa-calculator me-2"></i>{% endblock %}
-            {% block header_title %}GMAT 智能解題助手{% endblock %}
-            {% block header_subtitle %}數學問題解析，提供詳細步驟與快速解法{% endblock %}
-            
-            {% block input_placeholder %}請輸入您的GMAT數學問題...{% endblock %}
-            
-            {% block theme_cards %}
-                <div class="theme-card active" onclick="selectMode('simple_explain')">
-                    <div class="theme-icon">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                    </div>
-                    <h4>簡單解釋</h4>
-                    <p>以高中生能理解的方式解釋解題步驟</p>
-                </div>
-                <div class="theme-card" onclick="selectMode('quick_solve')">
-                    <div class="theme-icon">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h4>快速解法</h4>
-                    <p>提供最快捷的解題方法，減少計算量</p>
-                </div>
-                <div class="theme-card" onclick="selectMode('variant_question')">
-                    <div class="theme-icon">
-                        <i class="fas fa-random"></i>
-                    </div>
-                    <h4>變體題目</h4>
-                    <p>生成類似的練習題，鞏固解題方法</p>
-                </div>
-                <div class="theme-card" onclick="selectMode('concept_explanation')">
-                    <div class="theme-icon">
-                        <i class="fas fa-lightbulb"></i>
-                    </div>
-                    <h4>觀念補充</h4>
-                    <p>分析題目測試的數學概念與知識點</p>
-                </div>
-                <div class="theme-card" onclick="selectMode('pattern_recognition')">
-                    <div class="theme-icon">
-                        <i class="fas fa-search"></i>
-                    </div>
-                    <h4>題型線索</h4>
-                    <p>識別適用此解法的題目特徵</p>
-                </div>
-            {% endblock %}
+            <h1>{% block header_icon %}<i class="fas fa-robot me-2"></i>{% endblock %}{% block header_title %}GMAT 智能解題助手{% endblock %}</h1>
+            <p>{% block header_subtitle %}提供詳細解題步驟與快速解法{% endblock %}</p>
+            <div class="mt-3">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-light me-2"><i class="fas fa-home me-1"></i>首頁</a>
+                <a href="{{ url_for('history') }}" class="btn btn-outline-light"><i class="fas fa-history me-1"></i>歷史記錄</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light ms-2"><i class="fas fa-sign-out-alt me-1"></i>登出</a>
+            </div>
         </div>
     </header>
 
     <div class="container my-4 flex-grow-1 d-flex flex-column">
-        <!-- 修改解题模式选择，使用卡片式设计 -->
+        <!-- 解题模式选择，每个页面自定义 -->
         <div class="theme-cards">
-            <div class="theme-card active" onclick="selectMode('simple_explain')">
-                <div class="theme-icon">
-                    <i class="fas fa-chalkboard-teacher"></i>
-                </div>
-                <h4>簡單解釋</h4>
-                <p>以高中生能理解的方式解釋解題步驟</p>
-            </div>
-            <div class="theme-card" onclick="selectMode('quick_solve')">
-                <div class="theme-icon">
-                    <i class="fas fa-bolt"></i>
-                </div>
-                <h4>快速解法</h4>
-                <p>提供最快捷的解題方法，減少計算量</p>
-            </div>
-            <div class="theme-card" onclick="selectMode('variant_question')">
-                <div class="theme-icon">
-                    <i class="fas fa-random"></i>
-                </div>
-                <h4>變體題目</h4>
-                <p>生成類似的練習題，鞏固解題方法</p>
-            </div>
-            <!-- 新增兩個解題模式卡片 -->
-            <div class="theme-card" onclick="selectMode('concept_explanation')">
-                <div class="theme-icon">
-                    <i class="fas fa-lightbulb"></i>
-                </div>
-                <h4>觀念補充</h4>
-                <p>分析題目測試的數學概念與知識點</p>
-            </div>
-            <div class="theme-card" onclick="selectMode('pattern_recognition')">
-                <div class="theme-icon">
-                    <i class="fas fa-search"></i>
-                </div>
-                <h4>題型線索</h4>
-                <p>識別適用此解法的題目特徵</p>
-            </div>
+            {% block theme_cards %}{% endblock %}
         </div>
         
         <div class="chat-container">
@@ -426,9 +327,9 @@
             
             <div class="chat-input-container">
                 <form method="POST" class="chat-form">
-                    <input type="hidden" name="instruction" id="instruction" value="simple_explain">
+                    <input type="hidden" name="instruction" id="instruction" value="{% block default_instruction %}simple_explain{% endblock %}">
                     <div class="mb-3">
-                        <textarea class="form-control" id="user-input" name="user_input" rows="3" placeholder="請輸入您的GMAT數學問題..." required></textarea>
+                        <textarea class="form-control" id="user-input" name="user_input" rows="3" placeholder="{% block input_placeholder %}請輸入您的GMAT問題...{% endblock %}" required></textarea>
                     </div>
                     <div class="d-flex justify-content-between">
                         <button type="button" class="btn btn-secondary" onclick="clearInput()">
@@ -560,5 +461,6 @@
             loadingDots.textContent = '.'.repeat(dotCount);
         }, 500);
     </script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
