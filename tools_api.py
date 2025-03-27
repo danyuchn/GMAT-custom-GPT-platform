@@ -31,7 +31,7 @@ def handle_math_classification(user_input):
                     "content": user_input
                 }
             ],
-            temperature=1,
+            temperature=0.2,
             max_tokens=2048,
             top_p=1
         )
