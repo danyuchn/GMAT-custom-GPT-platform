@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -488,12 +488,24 @@ def graph_chat():
     return handle_chat("graph", "graph_chat.html")
 
 # 添加工具頁面路由
+# 在 quant_tool 函數中添加成本計算和餘額扣除
 @app.route('/quant_tool', methods=['GET', 'POST'])
 @login_required
 def quant_tool():
     if request.method == 'POST':
         user_input = request.form.get('user_input')
         instruction = request.form.get('instruction')
+        
+        # 檢查用戶餘額是否足夠
+        has_balance, balance = token_manager.check_balance(current_user.id)
+        if not has_balance:
+            flash(f"您的API餘額不足，請等待下週日重置。當前餘額: {balance:.4f} 元", "warning")
+            chat_id = session.get('chat_id')
+            if chat_id:
+                messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+            else:
+                messages = []
+            return render_template('quant_tool.html', messages=messages, api_balance=balance)
         
         # 使用工具 API 處理請求
         from tools_api import process_tool_request
@@ -502,7 +514,7 @@ def quant_tool():
         # 創建新的消息
         timestamp = datetime.now()
         
-        # 用戶消息 - 移除 user_id 參數
+        # 用戶消息
         user_message = Message(
             role='user',
             content=user_input,
@@ -510,17 +522,33 @@ def quant_tool():
             chat_id=session.get('chat_id')
         )
         
-        # AI 回應 - 移除 user_id 參數
+        # AI 回應
         if result['status'] == 'success':
             ai_content = result['content']
         else:
             ai_content = f"處理請求時發生錯誤: {result['message']}"
             
+        # 估算 token 使用量和成本
+        # 這裡使用簡單估算，實際應該從 API 回應中獲取
+        prompt_tokens = len(user_input) // 4  # 粗略估計，4個字符約等於1個token
+        completion_tokens = len(ai_content) // 4
+        _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+        
+        # 扣除用戶餘額
+        new_balance = token_manager.deduct_balance(current_user.id, turn_cost)
+        
+        # 如果餘額不足，提示用戶
+        if new_balance <= 0:
+            flash(f"您的API餘額已用完，請等待下週日重置。", "warning")
+            
         ai_message = Message(
             role='assistant',
             content=ai_content,
             timestamp=timestamp,
-            chat_id=session.get('chat_id')
+            chat_id=session.get('chat_id'),
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            cost=turn_cost
         )
         
         # 保存消息
@@ -530,7 +558,16 @@ def quant_tool():
         
         # 獲取更新後的消息列表
         messages = Message.query.filter_by(chat_id=session.get('chat_id')).order_by(Message.timestamp).all()
-        return render_template('quant_tool.html', messages=messages)
+        
+        # 獲取當前餘額和重置天數
+        current_balance = token_manager.get_balance(current_user.id)
+        next_reset = token_manager.get_next_reset_time()
+        days_until_reset = (next_reset - datetime.utcnow()).days
+        
+        return render_template('quant_tool.html', 
+                              messages=messages, 
+                              api_balance=current_balance,
+                              days_until_reset=days_until_reset)
     
     # GET 請求處理
     chat_id = request.args.get('chat_id')
@@ -555,12 +592,266 @@ def quant_tool():
 @app.route('/verbal_tool')
 @login_required
 def verbal_tool():
-    return render_template('verbal_tool.html')
+    if request.method == 'POST':
+        user_input = request.form.get('user_input')
+        instruction = request.form.get('instruction', 'critical_reasoning')
+        
+        # 檢查用戶餘額是否足夠
+        has_balance, balance = token_manager.check_balance(current_user.id)
+        if not has_balance:
+            flash(f"您的API餘額不足，請等待下週日重置。當前餘額: {balance:.4f} 元", "warning")
+            chat_id = session.get('chat_id')
+            if chat_id:
+                messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+            else:
+                messages = []
+            return render_template('verbal_tool.html', messages=messages, api_balance=balance)
+        
+        # 使用工具 API 處理請求
+        from tools_api import process_tool_request
+        result = process_tool_request(instruction, user_input)
+        
+        # 創建新的消息
+        timestamp = datetime.now()
+        
+        # 獲取或創建聊天ID
+        chat_id = session.get('chat_id')
+        if not chat_id:
+            new_chat = Chat(user_id=current_user.id, category="verbal_tool")
+            db.session.add(new_chat)
+            db.session.commit()
+            chat_id = new_chat.id
+            session['chat_id'] = chat_id
+        
+        # 用戶消息
+        user_message = Message(
+            role='user',
+            content=user_input,
+            timestamp=timestamp,
+            chat_id=chat_id
+        )
+        
+        # AI 回應
+        if result['status'] == 'success':
+            ai_content = result['content']
+        else:
+            ai_content = f"處理請求時發生錯誤: {result['message']}"
+            
+        # 估算 token 使用量和成本
+        prompt_tokens = len(user_input) // 4  # 粗略估計，4個字符約等於1個token
+        completion_tokens = len(ai_content) // 4
+        _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+        
+        # 扣除用戶餘額
+        new_balance = token_manager.deduct_balance(current_user.id, turn_cost)
+        
+        # 如果餘額不足，提示用戶
+        if new_balance <= 0:
+            flash(f"您的API餘額已用完，請等待下週日重置。", "warning")
+            
+        ai_message = Message(
+            role='assistant',
+            content=ai_content,
+            timestamp=timestamp,
+            chat_id=chat_id,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            cost=turn_cost
+        )
+        
+        # 保存消息
+        db.session.add(user_message)
+        db.session.add(ai_message)
+        db.session.commit()
+        
+        # 獲取更新後的消息列表
+        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+        
+        # 獲取當前餘額和重置天數
+        current_balance = token_manager.get_balance(current_user.id)
+        next_reset = token_manager.get_next_reset_time()
+        days_until_reset = (next_reset - datetime.utcnow()).days
+        
+        return render_template('verbal_tool.html', 
+                              messages=messages, 
+                              api_balance=current_balance,
+                              days_until_reset=days_until_reset)
+    
+    # GET 請求處理
+    chat_id = request.args.get('chat_id')
+    if chat_id:
+        session['chat_id'] = chat_id
+        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+    else:
+        # 創建新的聊天
+        new_chat = Chat(
+            user_id=current_user.id,
+            category="verbal_tool"
+        )
+        db.session.add(new_chat)
+        db.session.commit()
+        
+        session['chat_id'] = new_chat.id
+        messages = []
+    
+    # 獲取當前餘額和重置天數
+    current_balance = token_manager.get_balance(current_user.id)
+    next_reset = token_manager.get_next_reset_time()
+    days_until_reset = (next_reset - datetime.utcnow()).days
+    
+    return render_template('verbal_tool.html', 
+                          messages=messages, 
+                          api_balance=current_balance,
+                          days_until_reset=days_until_reset)
 
-@app.route('/core_tool')
+# 修改 core_tool 路由函數
+@app.route('/core_tool', methods=['GET', 'POST'])
 @login_required
 def core_tool():
-    return render_template('core_tool.html')
+    if request.method == 'POST':
+        user_input = request.form.get('user_input')
+        instruction = request.form.get('instruction', 'time_management')
+        
+        # 檢查用戶餘額是否足夠
+        has_balance, balance = token_manager.check_balance(current_user.id)
+        if not has_balance:
+            flash(f"您的API餘額不足，請等待下週日重置。當前餘額: {balance:.4f} 元", "warning")
+            chat_id = session.get('chat_id')
+            if chat_id:
+                messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+            else:
+                messages = []
+            return render_template('core_tool.html', messages=messages, api_balance=balance)
+        
+        # 使用工具 API 處理請求
+        from tools_api import process_tool_request
+        result = process_tool_request(instruction, user_input)
+        
+        # 創建新的消息
+        timestamp = datetime.now()
+        
+        # 獲取或創建聊天ID
+        chat_id = session.get('chat_id')
+        if not chat_id:
+            new_chat = Chat(user_id=current_user.id, category="core_tool")
+            db.session.add(new_chat)
+            db.session.commit()
+            chat_id = new_chat.id
+            session['chat_id'] = chat_id
+        
+        # 用戶消息
+        user_message = Message(
+            role='user',
+            content=user_input,
+            timestamp=timestamp,
+            chat_id=chat_id
+        )
+        
+        # AI 回應
+        if result['status'] == 'success':
+            ai_content = result['content']
+        else:
+            ai_content = f"處理請求時發生錯誤: {result['message']}"
+            
+        # 估算 token 使用量和成本
+        prompt_tokens = len(user_input) // 4  # 粗略估計，4個字符約等於1個token
+        completion_tokens = len(ai_content) // 4
+        _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+        
+        # 扣除用戶餘額
+        new_balance = token_manager.deduct_balance(current_user.id, turn_cost)
+        
+        # 如果餘額不足，提示用戶
+        if new_balance <= 0:
+            flash(f"您的API餘額已用完，請等待下週日重置。", "warning")
+            
+        ai_message = Message(
+            role='assistant',
+            content=ai_content,
+            timestamp=timestamp,
+            chat_id=chat_id,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            cost=turn_cost
+        )
+        
+        # 保存消息
+        db.session.add(user_message)
+        db.session.add(ai_message)
+        db.session.commit()
+        
+        # 獲取更新後的消息列表
+        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+        
+        # 獲取當前餘額和重置天數
+        current_balance = token_manager.get_balance(current_user.id)
+        next_reset = token_manager.get_next_reset_time()
+        days_until_reset = (next_reset - datetime.utcnow()).days
+        
+        return render_template('core_tool.html', 
+                              messages=messages, 
+                              api_balance=current_balance,
+                              days_until_reset=days_until_reset)
+    
+    # GET 請求處理
+    chat_id = request.args.get('chat_id')
+    if chat_id:
+        session['chat_id'] = chat_id
+        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+    else:
+        # 創建新的聊天
+        new_chat = Chat(
+            user_id=current_user.id,
+            category="core_tool"
+        )
+        db.session.add(new_chat)
+        db.session.commit()
+        
+        session['chat_id'] = new_chat.id
+        messages = []
+    
+    # 獲取當前餘額和重置天數
+    current_balance = token_manager.get_balance(current_user.id)
+    next_reset = token_manager.get_next_reset_time()
+    days_until_reset = (next_reset - datetime.utcnow()).days
+    
+    return render_template('core_tool.html', 
+                          messages=messages, 
+                          api_balance=current_balance,
+                          days_until_reset=days_until_reset)
+
+@app.route('/api/user/stats', methods=['GET'])
+@login_required
+def get_user_stats():
+    """獲取當前用戶的 API 使用統計"""
+    try:
+        # 獲取用戶餘額
+        balance = token_manager.get_balance(current_user.id)
+        
+        # 獲取下次重置時間
+        next_reset = token_manager.get_next_reset_time()
+        days_until_reset = (next_reset - datetime.utcnow()).days
+        
+        # 計算用戶的總 token 使用量和成本
+        messages = Message.query.join(Chat).filter(Chat.user_id == current_user.id).all()
+        total_tokens = sum(msg.prompt_tokens + msg.completion_tokens for msg in messages)
+        total_cost = sum(msg.cost for msg in messages)
+        
+        return jsonify({
+            'status': 'success',
+            'total_tokens': total_tokens,
+            'total_cost': total_cost,
+            'balance': balance,
+            'days_until_reset': days_until_reset
+        })
+    except Exception as e:
+        app.logger.error(f"獲取用戶統計失敗: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+
 
 if __name__ == "__main__":
     with app.app_context():

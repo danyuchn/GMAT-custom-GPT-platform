@@ -240,12 +240,93 @@
                 align-items: center;
             }
         }
+        
+        /* 更美觀的 API 餘額顯示樣式 */
+        .api-balance-container {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1001;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+            font-size: 0.85rem;
+            max-width: 200px;
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .api-balance-container:hover {
+            background-color: rgba(255, 255, 255, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+        }
+        
+        .api-balance-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .api-balance-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        .api-balance-value {
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin: 0 4px;
+            color: var(--primary-color, #4361ee);
+        }
+        
+        .api-balance-warning {
+            color: #e63946;
+        }
+        
+        .api-balance-ok {
+            color: #2a9d8f;
+        }
+        
+        @media (max-width: 768px) {
+            .api-balance-container {
+                top: auto;
+                bottom: 70px;
+                right: 10px;
+                font-size: 0.75rem;
+                padding: 6px 10px;
+            }
+            
+            .api-balance-value {
+                font-size: 0.85rem;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- API 餘額顯示 - 更新顯示內容 -->
+    <div class="api-balance-container" style="display: block !important;">
+        <div class="api-balance-info">
+            <div class="api-balance-item">
+                <i class="fas fa-wallet me-1"></i>
+                <span id="api-balance" class="api-balance-value">¥0.00</span>
+            </div>
+            <div class="api-balance-item">
+                <i class="fas fa-clock-rotate-left me-1"></i>
+                <span id="days-until-reset" class="api-balance-value">0</span> 天後重置
+            </div>
+        </div>
+    </div>
+
     <!-- 修改头部，使用与主页相同的风格 -->
     <header class="chat-header">
+        <!-- 現有頭部內容保持不變 -->
         <div class="container">
             <h1>{% block header_icon %}<i class="fas fa-robot me-2"></i>{% endblock %}{% block header_title %}GMAT 智能解題助手{% endblock %}</h1>
             <p>{% block header_subtitle %}提供詳細解題步驟與快速解法{% endblock %}</p>
@@ -318,7 +399,7 @@
             </div>
             
             <div class="chat-input-container">
-                <form method="POST" class="chat-form">
+                <form method="POST" class="chat-form" id="chat-form">
                     <input type="hidden" name="instruction" id="instruction" value="{% block default_instruction %}simple_explain{% endblock %}">
                     <div class="mb-3">
                         <textarea class="form-control" id="user-input" name="user_input" rows="3" placeholder="{% block input_placeholder %}請輸入您的GMAT問題...{% endblock %}" required></textarea>
@@ -343,6 +424,21 @@
     </footer>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 添加 MathJax 支持 -->
+    <script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
     <script>
         // 用於追蹤用戶是否正在查看歷史消息
         let userIsScrollingUp = false;
@@ -381,6 +477,9 @@
                 // 更新上次滾動位置
                 lastScrollTop = chatMessages.scrollTop;
             });
+            
+            // 更新 API 使用統計
+            updateApiStats();
         });
         
         // 調整佈局函數
@@ -484,6 +583,9 @@
                         lastScrollTop = chatMessages.scrollTop;
                     }, 100);
                 }
+                
+                // 提交後更新 API 統計
+                setTimeout(updateApiStats, 2000);
             });
         });
         
@@ -495,74 +597,46 @@
             dotCount = (dotCount + 1) % 4;
             loadingDots.textContent = '.'.repeat(dotCount);
         }, 500);
+        
+        // 更新 API 使用統計
+        // 確保這個函數在所有頁面都能正確執行
+        function updateApiStats() {
+            fetch('/api/user/stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // 更新 API 餘額顯示
+                        document.getElementById('api-balance').textContent = `¥${data.balance.toFixed(2)}`;
+                        
+                        // 更新重置天數
+                        document.getElementById('days-until-reset').textContent = data.days_until_reset;
+                        
+                        // 根據餘額設置顏色
+                        const balanceElement = document.getElementById('api-balance');
+                        if (data.balance <= 1.0) {
+                            balanceElement.classList.add('api-balance-warning');
+                            balanceElement.classList.remove('api-balance-ok');
+                        } else {
+                            balanceElement.classList.add('api-balance-ok');
+                            balanceElement.classList.remove('api-balance-warning');
+                        }
+                    }
+                })
+                .catch(error => console.error('獲取API統計失敗:', error));
+        }
+        
+        // 確保頁面加載時和每次提交表單後都更新統計數據
+        document.addEventListener('DOMContentLoaded', updateApiStats);
+        
+        // 監聽表單提交事件
+        const chatForm = document.getElementById('chat-form');
+        if (chatForm) {
+            chatForm.addEventListener('submit', function() {
+                // 表單提交後延遲更新統計數據，等待後端處理完成
+                setTimeout(updateApiStats, 2000);
+            });
+        }
     </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
-
-
-<!-- 在適當位置添加以下代碼，例如在頁面頂部或側邊欄 -->
-{% if api_balance is defined %}
-<div class="api-balance-container">
-    <div class="api-balance-info">
-        <span class="api-balance-label">API餘額:</span>
-        <span class="api-balance-value {% if api_balance < 1 %}text-danger{% elif api_balance < 3 %}text-warning{% else %}text-success{% endif %}">
-            {{ "%.4f"|format(api_balance) }} 元
-        </span>
-        {% if days_until_reset is defined %}
-        <small class="api-balance-reset">
-            ({{ days_until_reset }} 天後重置)
-        </small>
-        {% endif %}
-    </div>
-</div>
-
-<style>
-    .api-balance-container {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        z-index: 1000;
-        background-color: rgba(255, 255, 255, 0.9);
-        padding: 5px 10px;
-        border-radius: 20px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        font-size: 0.85rem;
-        max-width: 200px;
-        text-align: center;
-    }
-    
-    .api-balance-info {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .api-balance-value {
-        font-weight: bold;
-        font-size: 1rem;
-    }
-    
-    .api-balance-reset {
-        font-size: 0.75rem;
-        opacity: 0.8;
-    }
-    
-    @media (max-width: 768px) {
-        .api-balance-container {
-            top: auto;
-            bottom: 70px;
-            right: 10px;
-            font-size: 0.75rem;
-        }
-    }
-</style>
-{% endif %}
-
-<style>
-    /* 在現有樣式中添加 */
-    .message-body {
-        white-space: pre-wrap;  /* 保留換行和空格 */
-        word-wrap: break-word;  /* 確保長文本會換行 */
-    }
-</style>

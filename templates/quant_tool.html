@@ -16,6 +16,17 @@
         <h4>數學分類</h4>
         <p>分析題目測試的GMAT數學核心觀念</p>
     </div>
+    <div class="theme-card" onclick="selectMode('word_problem_converter')">
+        <div class="theme-icon">
+            <i class="fas fa-exchange-alt"></i>
+        </div>
+        <h4>應用題轉換器</h4>
+        <p>將抽象數學題轉換為生動的實際應用場景</p>
+    </div>
 {% endblock %}
 
 {% block default_instruction %}math_classification{% endblock %}
+
+{% block extra_js %}
+<!-- 移除重複的 API 統計更新代碼，因為已經在 chat_base.html 中實現 -->
+{% endblock %}
