@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 import traceback
 
 # 必須先加載環境變量
-load_dotenv('/Users/danyuchn/Documents/GitHub/GMAT-custom-GPT-platform/.env')
+load_dotenv()
 
 # 檢查API密鑰是否加載成功
 if not os.getenv("OPENAI_API_KEY"):
