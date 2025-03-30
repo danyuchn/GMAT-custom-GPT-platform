@@ -13,12 +13,15 @@ import traceback
 load_dotenv()
 
 # 檢查API密鑰是否加載成功
-if not os.getenv("OPENAI_API_KEY"):
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY未正確配置，請檢查.env文件")
+
+print(f"API key loaded successfully: {OPENAI_API_KEY[:10]}...")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/danyuchn/Documents/GitHub/GMAT-custom-GPT-platform/users.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 初始化資料庫和登入管理器
@@ -28,8 +31,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'warning'
 
-# 讀取 API 金鑰
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# 初始化 OpenAI 客戶端
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # 定義價格（每 1M tokens）
@@ -589,12 +591,12 @@ def quant_tool():
     
     return render_template('quant_tool.html', messages=messages)
 
-@app.route('/verbal_tool')
+@app.route('/verbal_tool', methods=['GET', 'POST'])
 @login_required
 def verbal_tool():
     if request.method == 'POST':
         user_input = request.form.get('user_input')
-        instruction = request.form.get('instruction', 'critical_reasoning')
+        instruction = request.form.get('instruction', 'cr_classification')
         
         # 檢查用戶餘額是否足夠
         has_balance, balance = token_manager.check_balance(current_user.id)

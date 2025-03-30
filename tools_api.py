@@ -6,7 +6,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 初始化 OpenAI 客戶端
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY未正確配置，請檢查.env文件")
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # 定義 GPT-4o 模型的價格（每百萬 token）
 GPT4O_PRICES = {
@@ -214,6 +218,199 @@ def handle_word_problem_converter(user_input):
             "message": str(e)
         }
 
+def handle_cr_classification(user_input):
+    """
+    處理 CR 分類工具的 API 請求
+    
+    Args:
+        user_input (str): 用戶輸入的 CR 題目
+        
+    Returns:
+        dict: API 回應結果
+    """
+    try:
+        response = client.responses.create(
+            model="gpt-4o",
+            input=[
+                {
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": """Role: You are an expert in GMAT Critical Reasoning problem-solving and question design.
+
+Task: The user will provide you with CR questions, and you must identify which of the following four sub-types these questions belong to (see Sub-Type Definitions).
+
+For each question, make two independent judgments on the sub-type and check if they are consistent. If inconsistent, make a third final judgment.
+Create a table for the user that organizes the number of occurrences for each sub-type.
+
+Sub-type Definitions:
+
+The four subtypes of Critical Reasoning questions are Analysis, Construction, Critique, and Plan.
+
+Analysis:
+- Questions about logical structure and roles of statements
+- Common phrases: "roles in boldface", "argument proceeds by", "technique used", "responds to"
+- Focus on logical/rhetorical roles, argumentative methods, unstated points
+
+Construction:
+- Questions about completing partial arguments/explanations
+- Common phrases: "logically completes", "most strongly support", "best explains", "depends on assumption"
+- Focus on conclusions, missing premises, explanations for observations
+
+Critique:
+- Questions about judging reasoning, finding strengths/weaknesses
+- Common phrases: "vulnerable to criticism", "logically flawed", "weakens", "strengthens", "useful to evaluate"
+- Focus on logical flaws, evidence assessment, hypothesis evaluation
+
+Plan:
+- Questions about reasoning for proposed actions
+- Focus on plans, strategies, actions
+- Common themes: plan success conditions, strategy evaluation, policy assessment"""
+                        }
+                    ]
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": user_input
+                        }
+                    ]
+                }
+            ],
+            text={
+                "format": {
+                    "type": "text"
+                }
+            },
+            reasoning={},
+            tools=[],
+            temperature=0.2,
+            max_output_tokens=2048,
+            top_p=1,
+            store=True
+        )
+        
+        # 正確提取文本內容
+        content = response.output[0].content[0].text
+        
+        # 處理 LaTeX 格式，確保正確渲染
+        content = content.replace('\\\\(', '\\(').replace('\\\\)', '\\)')
+        content = content.replace('\\\\[', '\\[').replace('\\\\]', '\\]')
+        
+        # 獲取 token 使用情況
+        input_tokens = response.usage.input_tokens
+        cached_tokens = response.usage.input_tokens_details.cached_tokens
+        output_tokens = response.usage.output_tokens
+        total_tokens = response.usage.total_tokens
+        
+        # 計算成本
+        cost = calculate_cost(input_tokens, cached_tokens, output_tokens)
+        
+        # 更新用戶的 API 配額
+        update_user_quota(input_tokens, output_tokens, cost)
+        
+        return {
+            "status": "success",
+            "content": content,
+            "tokens": {
+                "input": input_tokens,
+                "cached": cached_tokens,
+                "output": output_tokens,
+                "total": total_tokens
+            },
+            "cost": cost
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+def handle_distractor_mocker(user_input):
+    """
+    處理混淆選項檢討工具的 API 請求
+    
+    Args:
+        user_input (str): 用戶輸入的題目和兩個選項
+        
+    Returns:
+        dict: API 回應結果
+    """
+    try:
+        response = client.responses.create(
+            model="gpt-4o",
+            input=[
+                {
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": "Role: You are a GMAT expert for study abroad exams, specializing in helping users understand GMAT questions.\n\nTask: Communicate with the user in Traditional Chinese, using a tone and style as if speaking to a 10-year-old, ensuring simplicity and clarity. Follow these steps:\n\nThe user will provide a GMAT question along with exactly two options (one correct and one incorrect).\nExplain in detail:\nWhy the correct option meets the question's requirements.\nWhy the incorrect option does not meet the question's requirements.\nProvide two distinct analogy scenarios (new stories) for both the correct option and the incorrect option, helping the user understand why the correct option is correct and the incorrect option is incorrect.\n\nThen, based on the English question and two options provided by the user, change the story's domain and content while preserving the logic of the passage and options.\n\nCreate a variant question and two options in English, with the grammatical structure as similar as possible to the original question."
+                        }
+                    ]
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": user_input
+                        }
+                    ]
+                }
+            ],
+            text={
+                "format": {
+                    "type": "text"
+                }
+            },
+            reasoning={},
+            tools=[],
+            temperature=1.0,
+            max_output_tokens=2048,
+            top_p=1,
+            store=True
+        )
+        
+        # 正確提取文本內容
+        content = response.output[0].content[0].text
+        
+        # 處理 LaTeX 格式，確保正確渲染
+        content = content.replace('\\\\(', '\\(').replace('\\\\)', '\\)')
+        content = content.replace('\\\\[', '\\[').replace('\\\\]', '\\]')
+        
+        # 獲取 token 使用情況
+        input_tokens = response.usage.input_tokens
+        cached_tokens = response.usage.input_tokens_details.cached_tokens
+        output_tokens = response.usage.output_tokens
+        total_tokens = response.usage.total_tokens
+        
+        # 計算成本
+        cost = calculate_cost(input_tokens, cached_tokens, output_tokens)
+        
+        # 更新用戶的 API 配額
+        update_user_quota(input_tokens, output_tokens, cost)
+        
+        return {
+            "status": "success",
+            "content": content,
+            "tokens": {
+                "input": input_tokens,
+                "cached": cached_tokens,
+                "output": output_tokens,
+                "total": total_tokens
+            },
+            "cost": cost
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
 # 更新用戶 API 配額的函數
 def update_user_quota(input_tokens, output_tokens, cost, user_id=None):
     """
@@ -285,6 +482,8 @@ def handle_core_tool(tool_type, user_input):
 TOOL_HANDLERS = {
     "math_classification": handle_math_classification,
     "word_problem_converter": handle_word_problem_converter,
+    "cr_classification": handle_cr_classification,
+    "distractor_mocker": handle_distractor_mocker,
     # 可以添加更多工具的處理函數
 }
 

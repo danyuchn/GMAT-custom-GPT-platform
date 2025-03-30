@@ -9,19 +9,19 @@
 {% block input_placeholder %}請輸入您的語文工具相關問題...{% endblock %}
 
 {% block theme_cards %}
-    <div class="theme-card active" onclick="selectMode('critical_reasoning')">
+    <div class="theme-card active" onclick="selectMode('cr_classification')">
         <div class="theme-icon">
             <i class="fas fa-brain"></i>
         </div>
-        <h4>批判性推理</h4>
-        <p>分析論證結構與邏輯謬誤類型</p>
+        <h4>CR題題型分類</h4>
+        <p>分析題目測試的GMAT邏輯核心觀念</p>
     </div>
-    <div class="theme-card" onclick="selectMode('reading_comprehension')">
+    <div class="theme-card" onclick="selectMode('distractor_mocker')">
         <div class="theme-icon">
             <i class="fas fa-book-reader"></i>
         </div>
-        <h4>閱讀理解</h4>
-        <p>提升閱讀速度與理解準確性的技巧</p>
+        <h4>混淆選項檢討</h4>
+        <p>用類比情境方式深度檢討RC/CR第二輪留下的陷阱選項</p>
     </div>
     <div class="theme-card" onclick="selectMode('sentence_correction')">
         <div class="theme-icon">
@@ -46,4 +46,4 @@
     </div>
 {% endblock %}
 
-{% block default_instruction %}critical_reasoning{% endblock %}
+{% block default_instruction %}cr_classification{% endblock %}
