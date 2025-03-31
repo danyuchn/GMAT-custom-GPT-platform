@@ -281,6 +281,7 @@ export class MemStorage implements IStorage {
       ...insertMessage,
       id,
       createdAt: now,
+      responseId: insertMessage.responseId || null,
     };
     this.messages.set(id, message);
     return message;

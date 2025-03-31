@@ -23,7 +23,6 @@ export default function Chat() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const messageEndRef = useRef<HTMLDivElement>(null);
-  const [model, setModel] = useState<string>("o3-mini");
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
@@ -58,8 +57,7 @@ export default function Chat() {
   const createConversationMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("POST", "/api/conversations", {
-        systemPromptId: Number(promptId),
-        model
+        systemPromptId: Number(promptId)
       });
     },
     onSuccess: () => {
@@ -122,11 +120,6 @@ export default function Chat() {
     }
   }, [messages]);
 
-  // Update model selection
-  const handleModelChange = (value: string) => {
-    setModel(value);
-  };
-
   // Handle function selection
   const handleFunctionSelect = (prompt: string) => {
     setMessage(prompt);
@@ -175,21 +168,6 @@ export default function Chat() {
                 </div>
                 
                 <div className="flex items-center">
-                  <div className="relative inline-block text-left">
-                    <Select 
-                      value={model} 
-                      onValueChange={handleModelChange}
-                    >
-                      <SelectTrigger className="w-[180px] border-accent">
-                        <SelectValue placeholder="Select model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="o3-mini">o3-mini (faster)</SelectItem>
-                        <SelectItem value="gpt-4o">gpt-4o (smarter)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
                   <Button 
                     variant="outline" 
                     className="ml-3 text-primary"
@@ -257,21 +235,10 @@ export default function Chat() {
                       <DialogHeader>
                         <DialogTitle>選擇對話功能</DialogTitle>
                       </DialogHeader>
-                      <Tabs defaultValue="cards">
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="cards">卡片檢視</TabsTrigger>
-                          <TabsTrigger value="dropdown">下拉檢視</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="cards" className="mt-4">
-                          <FunctionCards 
-                            onSelect={handleFunctionSelect}
-                            selectedFunction={selectedFunction}
-                          />
-                        </TabsContent>
-                        <TabsContent value="dropdown" className="mt-4">
-                          <ChatFunctionSelector onSelect={handleFunctionSelect} />
-                        </TabsContent>
-                      </Tabs>
+                      <FunctionCards 
+                        onSelect={handleFunctionSelect}
+                        selectedFunction={selectedFunction}
+                      />
                     </DialogContent>
                   </Dialog>
                   
