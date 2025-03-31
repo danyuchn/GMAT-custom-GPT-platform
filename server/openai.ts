@@ -41,8 +41,8 @@ type ChatCompletionMessageParam =
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY,
   timeout: 60000, // 60 seconds timeout
-  maxRetries: 2, // limit retries to 2 times
-  maxConcurrency: 5 // limit concurrent requests
+  maxRetries: 2 // limit retries to 2 times
+  // Note: maxConcurrency不是有效的ClientOptions參數，已移除
 });
 
 // Generate welcome message based on system prompt
@@ -57,14 +57,23 @@ export async function generateSystemPrompt(prompt: string, promptTitle: string):
     const model = determineModel(promptTitle);
     console.log(`Using model: ${model} for welcome message with prompt: ${promptTitle}`);
     
-    const response = await openai.chat.completions.create({
+    // 創建不同參數配置，取決於使用的模型
+    const completionParams: any = {
       model: model,
       messages: messages,
-      max_tokens: 1000, // 限制回應長度
       temperature: 0.7, // 降低創意性提高響應速度
       presence_penalty: 0,
       frequency_penalty: 0,
-    });
+    };
+
+    // o3-mini 模型使用 max_completion_tokens 而不是 max_tokens
+    if (model === "o3-mini") {
+      completionParams.max_completion_tokens = 1000;
+    } else {
+      completionParams.max_tokens = 1000;
+    }
+    
+    const response = await openai.chat.completions.create(completionParams);
 
     return response.choices[0].message.content || 
       "Welcome to GMAT practice! I'm your AI assistant ready to help you prepare for the exam. What topic would you like to focus on today?";
@@ -86,6 +95,13 @@ export function determineModel(promptTitle: string): string {
   const graphRelatedKeywords = ['graph', 'chart', '圖表', 'Graph'];
   
   const promptLower = promptTitle.toLowerCase();
+  
+  // 確保不會將模型名稱當作提示詞內容
+  if (promptLower === "o3-mini" || promptLower === "gpt-4o") {
+    console.log(`Detected model name as prompt title, using gpt-4o`);
+    return "gpt-4o";
+  }
+  
   const isMathRelated = mathRelatedKeywords.some(keyword => 
     promptLower.includes(keyword.toLowerCase())
   );
@@ -151,12 +167,27 @@ export async function chatWithAI(
     // 注意：OpenAI最新的JS SDK不再使用previous_message_id，而是context參數
     const completionParams: any = {
       model: model,
-      messages: apiMessages
+      messages: apiMessages,
+      temperature: 0.7,
+      presence_penalty: 0,
+      frequency_penalty: 0
     };
+    
+    // o3-mini 模型使用 max_completion_tokens 而不是 max_tokens
+    if (model === "o3-mini") {
+      completionParams.max_completion_tokens = 1000;
+    } else {
+      completionParams.max_tokens = 1000;
+    }
     
     // 只有在提供了之前的響應ID時，才添加context參數
     if (previousResponseId) {
       completionParams.context = { previous_messages: [{ id: previousResponseId }] };
+    }
+    
+    // 設置較短的超時時間，加快o3-mini模型的響應速度
+    if (model === "o3-mini") {
+      completionParams.timeout = 30000; // 30秒超時，避免長時間等待
     }
     
     const response = await openai.chat.completions.create(completionParams);
