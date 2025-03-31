@@ -338,10 +338,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate AI response
       const prompt = systemPrompt.prompt;
-      const userMessages: ChatCompletionMessageParam[] = messages.map(msg => ({
-        role: msg.isUserMessage ? "user" : "assistant",
+      // 創建兼容的消息數組
+      const userMessages = messages.map(msg => ({
+        role: msg.isUserMessage ? "user" as const : "assistant" as const,
         content: msg.content
-      } as ChatCompletionMessageParam));
+      }));
       
       // Use chatWithAI with previous_response_id for better context management
       const aiResponse = await chatWithAI(

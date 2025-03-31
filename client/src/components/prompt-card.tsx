@@ -26,6 +26,13 @@ const iconMap: Record<string, any> = {
   zap: Zap,
 };
 
+// 映射標題為中文顯示
+const titleMap: Record<string, string> = {
+  "Quant-related": "數學題型",
+  "Verbal-Related": "語言題型",
+  "Graph-Related": "圖表題型"
+};
+
 export default function PromptCard({ prompt }: PromptCardProps) {
   const [, navigate] = useLocation();
 
@@ -47,7 +54,7 @@ export default function PromptCard({ prompt }: PromptCardProps) {
             <IconComponent className="h-6 w-6 text-white" />
           </div>
           <div className="ml-5">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">{prompt.title}</h3>
+            <h3 className="text-lg font-medium leading-6 text-gray-900">{titleMap[prompt.title] || prompt.title}</h3>
             <div className="mt-2 text-sm text-gray-500">
               {prompt.description}
             </div>
