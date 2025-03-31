@@ -64,38 +64,15 @@ export default function Login() {
       const responseData = await response.json();
       
       if (response.ok) {
-        // First show success message
+        // Show success message
         toast({
           title: "Login successful",
           description: "Welcome back to GMAT AI Assistant",
         });
         
-        // Set user data in context
+        // Set user data in context - this will trigger the auth context update
+        // and the protected routes will automatically handle redirect
         login(responseData);
-        
-        // 確保在重定向前先驗證會話
-        try {
-          const authCheckResponse = await fetch("/api/auth/me", {
-            credentials: "include",
-            headers: {
-              "Cache-Control": "no-cache",
-              "Pragma": "no-cache"
-            }
-          });
-          
-          if (authCheckResponse.ok) {
-            // Session is confirmed, now redirect
-            window.location.href = "/";
-          } else {
-            console.error("Session verification failed after login");
-            // Still try to redirect even if verification fails
-            window.location.href = "/";
-          }
-        } catch (checkError) {
-          console.error("Error checking auth status after login:", checkError);
-          // Still try to redirect even if verification fails
-          window.location.href = "/";
-        }
       } else {
         // Handle error from server
         toast({
