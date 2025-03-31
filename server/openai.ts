@@ -63,15 +63,23 @@ export async function generateSystemPrompt(prompt: string, promptTitle: string):
       messages: messages,
     };
 
-    // 僅當不是 o3-mini 模型時添加這些參數
-    if (model !== "o3-mini") {
+    // o3-mini 模型使用不同的參數
+    if (model === "o3-mini") {
+      // o3-mini只支持max_completion_tokens和messages參數
+      completionParams.max_completion_tokens = 1000;
+      // 不添加temperature, max_tokens等參數
+    } else {
+      // 其他模型使用標準參數
+      completionParams.max_tokens = 1000;
       completionParams.temperature = 0.7;
       completionParams.presence_penalty = 0;
       completionParams.frequency_penalty = 0;
-      completionParams.max_tokens = 1000;
-    } else {
-      completionParams.max_completion_tokens = 1000;
     }
+    
+    console.log(`Generating welcome message with params:`, JSON.stringify({
+      model: completionParams.model,
+      paramKeys: Object.keys(completionParams)
+    }));
     
     const response = await openai.chat.completions.create(completionParams);
 
@@ -165,19 +173,23 @@ export async function chatWithAI(
     ];
 
     // 注意：OpenAI最新的JS SDK不再使用previous_message_id，而是context參數
+    // 根據模型類型使用不同的參數設置
     const completionParams: any = {
       model: model,
-      messages: apiMessages,
-      temperature: 0.7,
-      presence_penalty: 0,
-      frequency_penalty: 0
+      messages: apiMessages
     };
     
-    // o3-mini 模型使用 max_completion_tokens 而不是 max_tokens
+    // o3-mini 模型使用不同的參數
     if (model === "o3-mini") {
+      // o3-mini只支持max_completion_tokens和messages參數
       completionParams.max_completion_tokens = 1000;
+      // 不添加temperature, max_tokens等參數
     } else {
+      // 其他模型使用標準參數
       completionParams.max_tokens = 1000;
+      completionParams.temperature = 0.7;
+      completionParams.presence_penalty = 0;
+      completionParams.frequency_penalty = 0;
     }
     
     // 只有在提供了之前的響應ID時，才添加context參數
@@ -185,7 +197,10 @@ export async function chatWithAI(
       completionParams.context = { previous_messages: [{ id: previousResponseId }] };
     }
     
-    // o3-mini 模型不需要特殊超時設置
+    console.log(`Sending request with params:`, JSON.stringify({
+      model: completionParams.model,
+      paramKeys: Object.keys(completionParams)
+    }));
     
     const response = await openai.chat.completions.create(completionParams);
 
