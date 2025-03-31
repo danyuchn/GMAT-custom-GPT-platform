@@ -1,5 +1,12 @@
 import OpenAI from "openai";
 
+// Define ChatCompletionMessageParam type locally to avoid import errors
+type ChatCompletionMessageParam = {
+  role: "system" | "user" | "assistant" | "function" | "tool";
+  content: string;
+  name?: string;
+};
+
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -7,12 +14,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // Generate welcome message based on system prompt
 export async function generateSystemPrompt(prompt: string, model: string): Promise<string> {
   try {
+    const messages: ChatCompletionMessageParam[] = [
+      { role: "system", content: prompt },
+      { role: "user", content: "Hello, I'd like to start practicing for the GMAT." }
+    ];
+    
     const response = await openai.chat.completions.create({
       model: model === "gpt-4o" ? "gpt-4o" : "o3-mini",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: "Hello, I'd like to start practicing for the GMAT." }
-      ],
+      messages: messages,
     });
 
     return response.choices[0].message.content || 
@@ -26,14 +35,19 @@ export async function generateSystemPrompt(prompt: string, model: string): Promi
 // Chat with the AI using conversation history
 export async function chatWithAI(
   systemPrompt: string, 
-  conversationHistory: Array<{ role: string; content: string }>,
+  conversationHistory: ChatCompletionMessageParam[],
   model: string
 ): Promise<string> {
   try {
+    const systemMessage: ChatCompletionMessageParam = { 
+      role: "system", 
+      content: systemPrompt 
+    };
+    
     const response = await openai.chat.completions.create({
       model: model === "gpt-4o" ? "gpt-4o" : "o3-mini",
       messages: [
-        { role: "system", content: systemPrompt },
+        systemMessage,
         ...conversationHistory
       ],
     });

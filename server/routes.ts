@@ -1,11 +1,26 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { insertUserSchema, insertMessageSchema, insertConversationSchema } from "../shared/schema";
+import { insertUserSchema, insertMessageSchema, insertConversationSchema, type User } from "../shared/schema";
 import { generateSystemPrompt } from "./openai";
+import { SessionData } from "express-session";
+
+// Importing OpenAI types
+type ChatCompletionMessageParam = {
+  role: "system" | "user" | "assistant" | "function" | "tool";
+  content: string;
+  name?: string;
+};
+
+// Extend express-session
+declare module "express-session" {
+  interface SessionData {
+    user?: User;
+  }
+}
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -100,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth middleware
-  const isAuthenticated = (req, res, next) => {
+  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     if (req.session.user) {
       next();
     } else {
@@ -108,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  const isAdmin = (req, res, next) => {
+  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
     if (req.session.user && req.session.user.isAdmin) {
       next();
     } else {
@@ -312,15 +327,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate AI response
       const prompt = systemPrompt.prompt;
-      const userMessages = messages.map(msg => ({
+      const userMessages: ChatCompletionMessageParam[] = messages.map(msg => ({
         role: msg.isUserMessage ? "user" : "assistant",
         content: msg.content
-      }));
+      } as ChatCompletionMessageParam));
+      
+      const systemMessage: ChatCompletionMessageParam = { 
+        role: "system", 
+        content: prompt 
+      };
       
       const response = await openai.chat.completions.create({
         model: conversation.model,
         messages: [
-          { role: "system", content: prompt },
+          systemMessage,
           ...userMessages
         ],
       });
