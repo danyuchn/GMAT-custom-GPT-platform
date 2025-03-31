@@ -6,12 +6,16 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/navbar";
 import Sidebar from "@/components/sidebar";
 import MessageBubble from "@/components/message-bubble";
+import ChatFunctionSelector, { chatFunctions } from "@/components/chat-function-selector";
+import FunctionCards from "@/components/function-cards";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { type Message, type SystemPrompt, type Conversation } from "@shared/schema";
-import { RefreshCw, Send, ArrowLeft, Save } from "lucide-react";
+import { RefreshCw, Send, ArrowLeft, Save, Lightbulb, ListFilter } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function Chat() {
   const { promptId } = useParams();
@@ -22,6 +26,8 @@ export default function Chat() {
   const [model, setModel] = useState<string>("o3-mini");
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
+  const [showFunctionDialog, setShowFunctionDialog] = useState(false);
   
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -121,6 +127,23 @@ export default function Chat() {
     setModel(value);
   };
 
+  // Handle function selection
+  const handleFunctionSelect = (prompt: string) => {
+    setMessage(prompt);
+    setShowFunctionDialog(false);
+    
+    // Find the function key from the prompt
+    const func = chatFunctions.find(f => f.prompt === prompt);
+    if (func) {
+      setSelectedFunction(func.key);
+    }
+    
+    toast({
+      title: "提示已選擇",
+      description: "您可以編輯訊息或直接發送",
+    });
+  };
+
   if (!isAuthenticated) {
     return null; // Don't render anything while redirecting
   }
@@ -218,6 +241,50 @@ export default function Chat() {
             
             <div className="border-t border-accent bg-white p-4">
               <div className="max-w-3xl mx-auto">
+                <div className="mb-2 flex justify-between items-center">
+                  <Dialog open={showFunctionDialog} onOpenChange={setShowFunctionDialog}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-1 text-primary"
+                      >
+                        <Lightbulb className="h-4 w-4" />
+                        <span>選擇提示功能</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[800px]">
+                      <DialogHeader>
+                        <DialogTitle>選擇對話功能</DialogTitle>
+                      </DialogHeader>
+                      <Tabs defaultValue="cards">
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="cards">卡片檢視</TabsTrigger>
+                          <TabsTrigger value="dropdown">下拉檢視</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="cards" className="mt-4">
+                          <FunctionCards 
+                            onSelect={handleFunctionSelect}
+                            selectedFunction={selectedFunction}
+                          />
+                        </TabsContent>
+                        <TabsContent value="dropdown" className="mt-4">
+                          <ChatFunctionSelector onSelect={handleFunctionSelect} />
+                        </TabsContent>
+                      </Tabs>
+                    </DialogContent>
+                  </Dialog>
+                  
+                  {selectedFunction && (
+                    <div className="text-xs text-slate-500 flex items-center gap-1">
+                      <ListFilter className="h-3 w-3" />
+                      <span>
+                        已選擇：{chatFunctions.find(f => f.key === selectedFunction)?.title}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
                 <form 
                   className="relative"
                   onSubmit={(e) => {
