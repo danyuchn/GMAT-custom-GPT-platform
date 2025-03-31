@@ -175,14 +175,15 @@ export async function chatWithAI(
     // 根據模型類型使用不同的參數設置
     const completionParams: any = {
       model: model,
-      messages: apiMessages
+      messages: apiMessages,
+      max_tokens: 1000
     };
     
-    // o3-mini 模型使用不同的參數
+    // o3-mini 模型使用標準的chat.completions格式
     if (model === "o3-mini") {
-      // o3-mini只支持max_completion_tokens和messages參數
-      completionParams.max_completion_tokens = 1000;
-      // 不添加temperature, max_tokens等參數
+      completionParams.temperature = 0.7;
+      completionParams.frequency_penalty = 0;
+      completionParams.presence_penalty = 0;
     } else {
       // 其他模型使用標準參數
       completionParams.max_tokens = 1000;
