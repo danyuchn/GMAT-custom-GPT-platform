@@ -12,7 +12,7 @@
   }
 }
 
-/* 數學公式相關樣式 */
+/* KaTeX 樣式自定義 */
 .katex-block {
   overflow-x: auto;
   overflow-y: hidden;
@@ -26,11 +26,12 @@
   font: normal 1.1em KaTeX_Main, Times New Roman, serif;
   line-height: 1.2;
   text-indent: 0;
+  max-width: 100%;
 }
 
-/* 公式間距調整 */
+/* 避免數學公式與文本之間間距過小 */
 .katex-display {
-  margin: 1em 0;
+  margin: 1em 0 !important;
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -40,4 +41,16 @@
   display: inline-block;
   text-align: center;
   width: 100%;
+}
+
+/* KaTeX渲染的公式在深色模式下的樣式 */
+.prose-invert .katex {
+  color: white;
+}
+
+/* 防止長公式打破布局 */
+.prose .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }

@@ -35,7 +35,13 @@ export default function Chat() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Fetch system prompt
+  // Fetch all system prompts for function selection
+  const { data: systemPrompts, isLoading: isLoadingSystemPrompts } = useQuery<SystemPrompt[]>({
+    queryKey: ['/api/prompts'],
+    enabled: isAuthenticated,
+  });
+
+  // Fetch current system prompt
   const { data: systemPrompt, isLoading: isLoadingPrompt } = useQuery<SystemPrompt>({
     queryKey: [`/api/prompts/${promptId}`],
     enabled: isAuthenticated,
@@ -55,13 +61,16 @@ export default function Chat() {
 
   // Create new conversation mutation
   const createConversationMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data?: { systemPromptId: number }) => {
       return apiRequest("POST", "/api/conversations", {
-        systemPromptId: Number(promptId)
+        systemPromptId: data?.systemPromptId || Number(promptId)
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/conversations/active/${promptId}`] });
+      // 使用動態參數以便在函數選擇時正確更新
+      const currentPromptId = promptId || "";
+      queryClient.invalidateQueries({ queryKey: [`/api/conversations/active/${currentPromptId}`] });
+      
       toast({
         title: "New conversation started",
         description: "You can now start chatting with your AI assistant",
@@ -110,7 +119,7 @@ export default function Chat() {
 
   // Handle creating a new conversation
   const handleNewConversation = () => {
-    createConversationMutation.mutate();
+    createConversationMutation.mutate(promptId ? { systemPromptId: Number(promptId) } : undefined);
   };
 
   // Scroll to bottom of messages when they update
@@ -130,12 +139,45 @@ export default function Chat() {
     const func = chatFunctions.find(f => f.prompt === prompt);
     if (func) {
       setSelectedFunction(func.key);
+      
+      // 查找相應的system prompt ID
+      if (systemPrompts && systemPrompts.length > 0) {
+        // 遍歷系統提示並尋找與功能名稱匹配的
+        const promptData = systemPrompts.find((p: SystemPrompt) => 
+          p.title.includes(func.title)
+        );
+        
+        if (promptData) {
+          // 創建新對話
+          createConversationMutation.mutate({ 
+            systemPromptId: promptData.id 
+          });
+          
+          toast({
+            title: "功能已選擇",
+            description: `已選擇: ${func.title}`,
+          });
+        } else {
+          toast({
+            title: "錯誤",
+            description: "無法找到對應的提示",
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "錯誤",
+          description: "系統提示尚未加載完成",
+          variant: "destructive"
+        });
+      }
+    } else {
+      toast({
+        title: "錯誤",
+        description: "選擇的功能無效",
+        variant: "destructive"
+      });
     }
-    
-    toast({
-      title: "功能已選擇",
-      description: `已選擇: ${func?.title}`,
-    });
   };
 
   if (!isAuthenticated) {

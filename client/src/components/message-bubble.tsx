@@ -15,32 +15,41 @@ interface MessageBubbleProps {
 const renderLatex = (content: string): string => {
   // 使用正則表達式找出所有的LaTeX公式
   // 匹配 $...$ 用於行內公式
-  // 匹配 $$...$$ 用於獨立公式
-  const inlineRegex = /\$(.*?)\$/g;
-  const blockRegex = /\$\$(.*?)\$\$/g;
+  // 匹配 $$...$$ 用於獨立公式 - 使用非貪婪模式 .*? 並允許多行
+  const inlineRegex = /\$([^$]+?)\$/g;
+  const blockRegex = /\$\$([\s\S]*?)\$\$/g;
   
   // 先將換行符轉換成<br>標籤
   let processedContent = content.replace(/\n/g, '<br>');
   
-  // 處理獨立公式
+  // 首先處理獨立公式 (block)
   processedContent = processedContent.replace(blockRegex, (match, latex) => {
     try {
-      return `<div class="katex-block">${katex.renderToString(latex, { displayMode: true })}</div>`;
+      // 添加具有樣式的div容器，使公式居中顯示
+      return `<div class="katex-block flex justify-center py-2">${katex.renderToString(latex.trim(), { 
+        displayMode: true,
+        throwOnError: false, // 防止渲染錯誤導致整個組件崩潰
+        output: 'html'
+      })}</div>`;
     } catch (error) {
-      console.error('KaTeX渲染錯誤:', error);
+      console.error('KaTeX渲染錯誤 (block):', error, 'LaTeX:', latex);
       return match; // 如果渲染失敗，保留原始文本
     }
   });
   
-  // 處理行內公式
+  // 然後處理行內公式 (inline)
   processedContent = processedContent.replace(inlineRegex, (match, latex) => {
-    // 忽略已經處理過的獨立公式
-    if (match.startsWith('$$')) return match;
-    
     try {
-      return katex.renderToString(latex, { displayMode: false });
+      // 確保我們不處理已經處理過的部分 (防止嵌套處理)
+      if (match.includes('class="katex"')) return match;
+      
+      return katex.renderToString(latex.trim(), { 
+        displayMode: false,
+        throwOnError: false,
+        output: 'html'
+      });
     } catch (error) {
-      console.error('KaTeX渲染錯誤:', error);
+      console.error('KaTeX渲染錯誤 (inline):', error, 'LaTeX:', latex);
       return match; // 如果渲染失敗，保留原始文本
     }
   });
@@ -66,9 +75,10 @@ export default function MessageBubble({ message, isLast }: MessageBubbleProps) {
       <div className="mb-4 max-w-3xl mx-auto">
         <div className="flex items-start justify-end">
           <div className="bg-primary text-white rounded-lg shadow-sm px-4 py-5 max-w-[80%]">
-            <div className="text-sm">
-              <p>{message.content}</p>
-            </div>
+            <div 
+              className="text-sm prose prose-sm prose-invert" 
+              dangerouslySetInnerHTML={{ __html: renderLatex(message.content) }}
+            />
           </div>
           <div className="flex-shrink-0 ml-4">
             <Avatar className="h-10 w-10 rounded-full bg-gray-200">
