@@ -1,29 +1,40 @@
 import OpenAI from "openai";
 
-// Define ChatCompletionMessageParam type locally to avoid import errors
-type ChatCompletionMessageParam = {
-  role: "system" | "user" | "assistant" | "function" | "tool";
-  content: string;
-  name?: string;
-};
-
-// Define ChatCompletionUserMessageParam for OpenAI API
-type ChatCompletionUserMessageParam = {
-  role: "user";
-  content: string;
-};
-
-// Define ChatCompletionSystemMessageParam for OpenAI API
+// Define types for OpenAI API
 type ChatCompletionSystemMessageParam = {
   role: "system";
   content: string;
 };
 
-// Define ChatCompletionAssistantMessageParam for OpenAI API
+type ChatCompletionUserMessageParam = {
+  role: "user";
+  content: string;
+};
+
 type ChatCompletionAssistantMessageParam = {
   role: "assistant";
   content: string;
 };
+
+type ChatCompletionToolMessageParam = {
+  role: "tool";
+  content: string;
+  tool_call_id: string;
+};
+
+type ChatCompletionFunctionMessageParam = {
+  role: "function";
+  content: string;
+  name: string;
+};
+
+// Combined type for message parameters
+type ChatCompletionMessageParam = 
+  | ChatCompletionSystemMessageParam 
+  | ChatCompletionUserMessageParam 
+  | ChatCompletionAssistantMessageParam
+  | ChatCompletionToolMessageParam
+  | ChatCompletionFunctionMessageParam;
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 
@@ -33,8 +44,8 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export async function generateSystemPrompt(prompt: string, promptTitle: string): Promise<string> {
   try {
     const messages = [
-      { role: "system", content: prompt } as ChatCompletionSystemMessageParam,
-      { role: "user", content: "Hello, I'd like to start practicing for the GMAT." } as ChatCompletionUserMessageParam
+      { role: "system", content: prompt } as const,
+      { role: "user", content: "Hello, I'd like to start practicing for the GMAT." } as const
     ];
     
     // Determine the appropriate model based on the prompt title
@@ -56,19 +67,25 @@ export async function generateSystemPrompt(prompt: string, promptTitle: string):
 
 // Determine which model to use based on prompt category
 export function determineModel(promptTitle: string): string {
-  // 如果是數學相關題型，使用o3-mini
-  const mathRelatedKeywords = ['quant', 'problem solving', 'data sufficiency', 'math', '數學'];
+  // 對於數學題型使用o3-mini，其他類型使用gpt-4o
+  const mathRelatedKeywords = ['quant', 'math', '數學'];
   const isMathRelated = mathRelatedKeywords.some(keyword => 
     promptTitle.toLowerCase().includes(keyword.toLowerCase())
   );
   
-  return isMathRelated ? "o3-mini" : "gpt-4o";
+  if (isMathRelated || promptTitle.includes("Quant")) {
+    console.log("Using o3-mini for math-related topic");
+    return "o3-mini";
+  } else {
+    console.log("Using gpt-4o for non-math topic");
+    return "gpt-4o";
+  }
 }
 
 // Chat with the AI using conversation history
 export async function chatWithAI(
   systemPrompt: string, 
-  conversationHistory: ChatCompletionMessageParam[],
+  conversationHistory: any[],
   promptTitle: string,
   previousResponseId?: string
 ): Promise<{content: string, id: string}> {
@@ -82,14 +99,47 @@ export async function chatWithAI(
     const model = determineModel(promptTitle);
     console.log(`Using model: ${model} for prompt: ${promptTitle}`);
     
-    const response = await openai.chat.completions.create({
+    // 將API轉換為OpenAI預期的格式
+    const apiMessages = [
+      systemMessage,
+      ...conversationHistory.map(msg => {
+        // 根據角色類型返回正確的消息格式
+        if (msg.role === "user") {
+          return { role: "user", content: msg.content } as const;
+        } else if (msg.role === "assistant") {
+          return { role: "assistant", content: msg.content } as const;
+        } else if (msg.role === "system") {
+          return { role: "system", content: msg.content } as const;
+        } else if (msg.role === "function") {
+          return { 
+            role: "function", 
+            content: msg.content, 
+            name: (msg as ChatCompletionFunctionMessageParam).name 
+          } as const;
+        } else if (msg.role === "tool") {
+          return { 
+            role: "tool", 
+            content: msg.content, 
+            tool_call_id: (msg as ChatCompletionToolMessageParam).tool_call_id 
+          } as const;
+        }
+        // 默認情況返回用戶消息
+        return { role: "user", content: msg.content } as const;
+      })
+    ];
+
+    // 注意：OpenAI最新的JS SDK不再使用previous_message_id，而是context參數
+    const completionParams: any = {
       model: model,
-      messages: [
-        systemMessage,
-        ...conversationHistory
-      ],
-      previous_message_id: previousResponseId
-    });
+      messages: apiMessages
+    };
+    
+    // 只有在提供了之前的響應ID時，才添加context參數
+    if (previousResponseId) {
+      completionParams.context = { previous_messages: [{ id: previousResponseId }] };
+    }
+    
+    const response = await openai.chat.completions.create(completionParams);
 
     return {
       content: response.choices[0].message.content || 

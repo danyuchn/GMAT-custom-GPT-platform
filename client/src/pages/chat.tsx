@@ -161,7 +161,7 @@ export default function Chat() {
                   </button>
                   <div>
                     <h2 className="text-lg font-medium text-gray-900">
-                      {isLoadingPrompt ? "Loading..." : systemPrompt?.title}
+                      {isLoadingPrompt ? "Loading..." : `GMAT ${systemPrompt?.title} Practice`}
                     </h2>
                     <div className="text-sm text-gray-500">Start your practice conversation</div>
                   </div>

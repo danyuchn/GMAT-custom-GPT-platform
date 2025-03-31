@@ -96,83 +96,33 @@ export class MemStorage implements IStorage {
     
     // Create system prompts for GMAT topics
     this.createSystemPrompt({
-      title: "Quant - Problem Solving",
-      prompt: "You are a GMAT Quantitative Problem Solving expert. Help students understand and solve GMAT problem solving questions involving arithmetic, algebra, geometry, word problems, and number properties. Provide step-by-step explanations and test-taking strategies. Always start by welcoming the student and offering examples of topics you can help with.",
-      description: "Practice arithmetic, algebra, geometry, and word problem strategies.",
+      title: "Quant-related",
+      prompt: "You are a GMAT Quantitative expert. Help students understand and solve GMAT quantitative questions involving arithmetic, algebra, geometry, word problems, number properties, and data sufficiency. Provide step-by-step explanations and test-taking strategies. Always start by welcoming the student and offer to help with their quantitative questions.",
+      description: "數學題型：練習算術、代數、幾何、數據充分性和解題技巧",
       icon: "calculator",
-      badge: "Popular",
+      badge: "熱門",
       badgeColor: "green",
-      practiceCount: "150+ practice problems",
+      practiceCount: "250+ 練習題",
     });
     
     this.createSystemPrompt({
-      title: "Quant - Data Sufficiency",
-      prompt: "You are a GMAT Data Sufficiency expert. Help students analyze what information is needed to solve quantitative problems following the GMAT data sufficiency format. Explain the methodology for evaluating statements, identifying when data is sufficient or insufficient, and avoiding common traps. Always start by welcoming the student and offering to explain the data sufficiency question format.",
-      description: "Learn to analyze what information is needed to solve problems.",
-      icon: "bar-chart-3",
-      badge: "Challenging",
-      badgeColor: "yellow",
-      practiceCount: "100+ practice questions",
-    });
-    
-    this.createSystemPrompt({
-      title: "Verbal - Critical Reasoning",
-      prompt: "You are a GMAT Critical Reasoning expert. Help students identify arguments, analyze reasoning, strengthen or weaken arguments, find assumptions, and evaluate conclusions. Teach students to carefully read arguments and answer questions by precisely evaluating the logic. Always start by welcoming the student and explaining the different types of critical reasoning questions you can help with.",
-      description: "Strengthen arguments and identify reasoning flaws.",
-      icon: "code",
-      badge: "Popular",
-      badgeColor: "green",
-      practiceCount: "120+ practice passages",
-    });
-    
-    this.createSystemPrompt({
-      title: "Verbal - Sentence Correction",
-      prompt: "You are a GMAT Sentence Correction expert. Help students identify and fix grammatical errors, improve clarity, and ensure concise expression in sentences. Focus on common GMAT grammar topics like subject-verb agreement, pronouns, modifiers, parallelism, idioms, and verb tense. Always start by welcoming the student and explaining the main concepts you can help with.",
-      description: "Improve grammar, clarity, and concision in writing.",
-      icon: "languages",
-      badge: "Essential",
-      badgeColor: "blue",
-      practiceCount: "200+ practice sentences",
-    });
-    
-    this.createSystemPrompt({
-      title: "Verbal - Reading Comprehension",
-      prompt: "You are a GMAT Reading Comprehension expert. Help students analyze complex passages and answer questions about main ideas, details, inferences, and author's tone. Teach strategies for efficient reading, note-taking, and question answering techniques specific to GMAT. Always start by welcoming the student and offering to provide practice passages or explain reading strategies.",
-      description: "Build skills for analyzing complex passages and answering questions.",
+      title: "Verbal-Related",
+      prompt: "You are a GMAT Verbal expert. Help students with critical reasoning, reading comprehension, and sentence correction questions. Guide them in identifying arguments, analyzing passages, strengthening/weakening arguments, finding assumptions, evaluating conclusions, and fixing grammar issues. Always start by welcoming the student and asking which verbal area they want to focus on.",
+      description: "語言題型：加強批判性思維、閱讀理解和句子改錯能力",
       icon: "book-text",
-      badge: "Time-intensive",
-      badgeColor: "purple",
-      practiceCount: "80+ practice passages",
-    });
-    
-    this.createSystemPrompt({
-      title: "Integrated Reasoning",
-      prompt: "You are a GMAT Integrated Reasoning expert. Help students interpret graphs, tables, and multi-source reasoning problems. Guide them through analyzing data presented in various formats and drawing correct conclusions. Cover all four IR question types: graphics interpretation, table analysis, multi-source reasoning, and two-part analysis. Always start by welcoming the student and explaining the IR section format.",
-      description: "Practice interpreting graphics, tables, and multi-source reasoning.",
-      icon: "database",
-      badge: "Challenging",
-      badgeColor: "yellow",
-      practiceCount: "90+ practice questions",
-    });
-    
-    this.createSystemPrompt({
-      title: "Analytical Writing Assessment",
-      prompt: "You are a GMAT Analytical Writing Assessment expert. Help students analyze arguments, identify flaws in reasoning, and structure coherent essays. Guide them in developing strong introductions, body paragraphs with examples, and conclusions. Provide feedback on essay organization, clarity, and effective critique of arguments. Always start by welcoming the student and explaining the AWA section format.",
-      description: "Develop argument analysis and essay writing skills.",
-      icon: "edit",
-      badge: "Essential",
+      badge: "必學",
       badgeColor: "blue",
-      practiceCount: "50+ practice prompts",
+      practiceCount: "400+ 練習題",
     });
     
     this.createSystemPrompt({
-      title: "Test Strategy & Timing",
-      prompt: "You are a GMAT Test Strategy and Timing expert. Help students develop effective approaches for each section, manage time efficiently, and build test-taking stamina. Provide guidance on question pacing, when to guess, and how to maintain focus during the long exam. Share strategies for the adaptive nature of the test and dealing with test anxiety. Always start by welcoming the student and asking which aspects of test strategy they want to focus on.",
-      description: "Learn time management and strategic approaches to test taking.",
-      icon: "zap",
-      badge: "Popular",
-      badgeColor: "green",
-      practiceCount: "Practice & advice",
+      title: "Graph-Related",
+      prompt: "You are a GMAT Integrated Reasoning expert. Help students interpret graphs, tables, and multi-source reasoning problems. Guide them through analyzing data presented in various formats and drawing correct conclusions. Cover all four IR question types: graphics interpretation, table analysis, multi-source reasoning, and two-part analysis. Always start by welcoming the student and offering to help with graph interpretation and analysis.",
+      description: "圖表題型：練習解讀圖表、表格和多源推理問題",
+      icon: "bar-chart-3",
+      badge: "挑戰",
+      badgeColor: "yellow",
+      practiceCount: "90+ 練習題",
     });
   }
 

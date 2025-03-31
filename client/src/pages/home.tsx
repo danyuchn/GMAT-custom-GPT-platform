@@ -41,10 +41,10 @@ export default function Home() {
               <div className="md:flex md:items-center md:justify-between pb-5 border-b border-accent">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                    GMAT Study Topics
+                    GMAT 學習主題
                   </h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    Select a topic to begin practicing with our AI assistant
+                    選擇一個主題開始與 AI 助手練習
                   </p>
                 </div>
               </div>
