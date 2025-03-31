@@ -140,9 +140,6 @@ export default function FunctionCards({ onSelect, selectedFunction }: FunctionCa
         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
           <p className="font-medium mb-1">已選擇：{chatFunctions.find(f => f.key === selectedFunction)?.title}</p>
           <p className="text-sm text-slate-700 mb-2">{chatFunctions.find(f => f.key === selectedFunction)?.description}</p>
-          <div className="text-xs text-slate-500 bg-white p-2 rounded border border-slate-200">
-            提示：{chatFunctions.find(f => f.key === selectedFunction)?.prompt}
-          </div>
         </div>
       )}
     </div>

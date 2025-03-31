@@ -125,7 +125,7 @@ export default function ChatFunctionSelector({ onSelect }: ChatFunctionSelectorP
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="max-w-xs">{chatFunctions.find(f => f.key === activeFunction)?.prompt}</p>
+                <p className="max-w-xs">{chatFunctions.find(f => f.key === activeFunction)?.description}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
