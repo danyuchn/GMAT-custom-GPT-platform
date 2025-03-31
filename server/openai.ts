@@ -173,20 +173,36 @@ export async function chatWithAI(
 
     // 注意：OpenAI最新的JS SDK不再使用previous_message_id，而是context參數
     // 根據模型類型使用不同的參數設置
-    const completionParams: any = {
-      model: model,
-      messages: apiMessages,
-      max_tokens: 1000
-    };
+    let completionParams: any;
     
-    // o3-mini 模型使用標準的chat.completions格式
     if (model === "o3-mini") {
-      completionParams.temperature = 0.7;
-      completionParams.frequency_penalty = 0;
-      completionParams.presence_penalty = 0;
+      // o3-mini 使用特殊格式
+      completionParams = {
+        model: "o3-mini",
+        input: [{
+          role: "developer",
+          content: [{
+            type: "input_text",
+            text: systemMessage.content
+          }]
+        }],
+        text: {
+          format: {
+            type: "text"
+          }
+        },
+        reasoning: {
+          effort: "medium"
+        },
+        tools: [],
+        store: true
+      };
     } else {
       // 其他模型使用標準參數
-      completionParams.max_tokens = 1000;
+      completionParams = {
+        model: model,
+        messages: apiMessages,
+        max_tokens: 1000,
       completionParams.temperature = 0.7;
       completionParams.presence_penalty = 0;
       completionParams.frequency_penalty = 0;
@@ -202,11 +218,14 @@ export async function chatWithAI(
       paramKeys: Object.keys(completionParams)
     }));
     
-    const response = await openai.chat.completions.create(completionParams);
+    const response = model === "o3-mini" 
+      ? await openai.responses.create(completionParams)
+      : await openai.chat.completions.create(completionParams);
 
     return {
-      content: response.choices[0].message.content || 
-        "I'm sorry, I couldn't generate a response. Please try again.",
+      content: model === "o3-mini"
+        ? response.text || "I'm sorry, I couldn't generate a response. Please try again."
+        : response.choices[0].message.content || "I'm sorry, I couldn't generate a response. Please try again.",
       id: response.id || ""
     };
   } catch (error) {
