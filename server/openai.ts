@@ -38,11 +38,7 @@ type ChatCompletionMessageParam =
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 120000, // 120 seconds timeout
-  maxRetries: 3, // increase retries
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Generate welcome message based on system prompt
 export async function generateSystemPrompt(prompt: string, promptTitle: string): Promise<string> {
@@ -56,31 +52,10 @@ export async function generateSystemPrompt(prompt: string, promptTitle: string):
     const model = determineModel(promptTitle);
     console.log(`Using model: ${model} for welcome message with prompt: ${promptTitle}`);
     
-    // 創建不同參數配置，取決於使用的模型
-    const completionParams: any = {
+    const response = await openai.chat.completions.create({
       model: model,
       messages: messages,
-    };
-
-    // o3-mini 模型使用不同的參數
-    if (model === "o3-mini") {
-      // o3-mini只支持max_completion_tokens和messages參數
-      completionParams.max_completion_tokens = 1000;
-      // 不添加temperature, max_tokens等參數
-    } else {
-      // 其他模型使用標準參數
-      completionParams.max_tokens = 1000;
-      completionParams.temperature = 0.7;
-      completionParams.presence_penalty = 0;
-      completionParams.frequency_penalty = 0;
-    }
-    
-    console.log(`Generating welcome message with params:`, JSON.stringify({
-      model: completionParams.model,
-      paramKeys: Object.keys(completionParams)
-    }));
-    
-    const response = await openai.chat.completions.create(completionParams);
+    });
 
     return response.choices[0].message.content || 
       "Welcome to GMAT practice! I'm your AI assistant ready to help you prepare for the exam. What topic would you like to focus on today?";
@@ -101,19 +76,14 @@ export function determineModel(promptTitle: string): string {
   const mathRelatedKeywords = ['quant', 'math', '數學', 'Quant'];
   const graphRelatedKeywords = ['graph', 'chart', '圖表', 'Graph'];
   
-  const promptLower = promptTitle.toLowerCase();
-  
-  // 確保不會將模型名稱當作提示詞內容
-  if (promptLower === "o3-mini" || promptLower === "gpt-4o") {
-    console.log(`Detected model name as prompt title, using gpt-4o`);
-    return "gpt-4o";
-  }
-  
+  // 檢查是否為數學相關提示
   const isMathRelated = mathRelatedKeywords.some(keyword => 
-    promptLower.includes(keyword.toLowerCase())
+    promptTitle.toLowerCase().includes(keyword.toLowerCase())
   );
+  
+  // 檢查是否為圖表相關提示（可能也包含數學內容）
   const isGraphRelated = graphRelatedKeywords.some(keyword => 
-    promptLower.includes(keyword.toLowerCase())
+    promptTitle.toLowerCase().includes(keyword.toLowerCase())
   );
   
   if (isMathRelated || isGraphRelated) {
@@ -172,40 +142,16 @@ export async function chatWithAI(
     ];
 
     // 注意：OpenAI最新的JS SDK不再使用previous_message_id，而是context參數
-    // 根據模型類型使用不同的參數設置
-    let completionParams: any;
-    
-    if (model === "o3-mini") {
-      // o3-mini 模型使用不同的參數
-      completionParams = {
-        model: model,
-        messages: apiMessages,
-        max_completion_tokens: 1000
-        // 不添加temperature, max_tokens等參數
-      };
-    } else {
-      // 其他模型使用標準參數
-      completionParams = {
-        model: model,
-        messages: apiMessages,
-        max_tokens: 1000,
-        temperature: 0.7,
-        presence_penalty: 0,
-        frequency_penalty: 0
-      };
-    }
+    const completionParams: any = {
+      model: model,
+      messages: apiMessages
+    };
     
     // 只有在提供了之前的響應ID時，才添加context參數
     if (previousResponseId) {
       completionParams.context = { previous_messages: [{ id: previousResponseId }] };
     }
     
-    console.log(`Sending request with params:`, JSON.stringify({
-      model: completionParams.model,
-      paramKeys: Object.keys(completionParams)
-    }));
-    
-    // 所有模型都使用 chat.completions API
     const response = await openai.chat.completions.create(completionParams);
 
     return {
@@ -214,9 +160,7 @@ export async function chatWithAI(
       id: response.id || ""
     };
   } catch (error) {
-    // 記錄錯誤
     console.error("Error chatting with AI:", error);
-    
     return {
       content: "I'm sorry, there was an error processing your request. Please try again.",
       id: ""
