@@ -122,7 +122,8 @@ export default function Chat() {
 
   // Handle function selection
   const handleFunctionSelect = (prompt: string) => {
-    setMessage(prompt);
+    // 不再將system prompt設置為消息內容
+    setMessage("");
     setShowFunctionDialog(false);
     
     // Find the function key from the prompt
@@ -132,8 +133,8 @@ export default function Chat() {
     }
     
     toast({
-      title: "提示已選擇",
-      description: "您可以編輯訊息或直接發送",
+      title: "功能已選擇",
+      description: `已選擇: ${func?.title}`,
     });
   };
 
