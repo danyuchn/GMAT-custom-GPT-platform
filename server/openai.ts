@@ -40,9 +40,8 @@ type ChatCompletionMessageParam =
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY,
-  timeout: 60000, // 60 seconds timeout
-  maxRetries: 2 // limit retries to 2 times
-  // Note: maxConcurrency不是有效的ClientOptions參數，已移除
+  timeout: 120000, // 120 seconds timeout
+  maxRetries: 3, // increase retries
 });
 
 // Generate welcome message based on system prompt
@@ -174,22 +173,26 @@ export async function chatWithAI(
 
     // 注意：OpenAI最新的JS SDK不再使用previous_message_id，而是context參數
     // 根據模型類型使用不同的參數設置
-    const completionParams: any = {
-      model: model,
-      messages: apiMessages
-    };
+    let completionParams: any;
     
-    // o3-mini 模型使用不同的參數
     if (model === "o3-mini") {
-      // o3-mini只支持max_completion_tokens和messages參數
-      completionParams.max_completion_tokens = 1000;
-      // 不添加temperature, max_tokens等參數
+      // o3-mini 模型使用不同的參數
+      completionParams = {
+        model: model,
+        messages: apiMessages,
+        max_completion_tokens: 1000
+        // 不添加temperature, max_tokens等參數
+      };
     } else {
       // 其他模型使用標準參數
-      completionParams.max_tokens = 1000;
-      completionParams.temperature = 0.7;
-      completionParams.presence_penalty = 0;
-      completionParams.frequency_penalty = 0;
+      completionParams = {
+        model: model,
+        messages: apiMessages,
+        max_tokens: 1000,
+        temperature: 0.7,
+        presence_penalty: 0,
+        frequency_penalty: 0
+      };
     }
     
     // 只有在提供了之前的響應ID時，才添加context參數
@@ -202,6 +205,7 @@ export async function chatWithAI(
       paramKeys: Object.keys(completionParams)
     }));
     
+    // 所有模型都使用 chat.completions API
     const response = await openai.chat.completions.create(completionParams);
 
     return {
@@ -210,7 +214,9 @@ export async function chatWithAI(
       id: response.id || ""
     };
   } catch (error) {
+    // 記錄錯誤
     console.error("Error chatting with AI:", error);
+    
     return {
       content: "I'm sorry, there was an error processing your request. Please try again.",
       id: ""
