@@ -60,12 +60,21 @@ export default function Login() {
       const responseData = await response.json();
       
       if (response.ok) {
+        // First set the user data in the context
         login(responseData);
-        navigate("/");
+        
         toast({
           title: "Login successful",
           description: "Welcome back to GMAT AI Assistant",
         });
+        
+        // Then use setTimeout to ensure state updates before navigation
+        setTimeout(() => {
+          // Double-check that user is set before redirecting
+          if (responseData) {
+            window.location.href = "/"; // Use direct location change instead of navigate
+          }
+        }, 100);
       } else {
         // Handle error from server
         toast({

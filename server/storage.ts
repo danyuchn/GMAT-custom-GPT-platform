@@ -199,6 +199,7 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
+      isAdmin: insertUser.isAdmin ?? false, // 確保 isAdmin 有值
       createdAt: now
     };
     this.users.set(id, user);
@@ -220,7 +221,13 @@ export class MemStorage implements IStorage {
   
   async createSystemPrompt(insertPrompt: InsertSystemPrompt): Promise<SystemPrompt> {
     const id = this.systemPromptIdCounter++;
-    const prompt: SystemPrompt = { ...insertPrompt, id };
+    const prompt: SystemPrompt = { 
+      ...insertPrompt, 
+      id,
+      badge: insertPrompt.badge ?? null,
+      badgeColor: insertPrompt.badgeColor ?? null,
+      practiceCount: insertPrompt.practiceCount ?? null
+    };
     this.systemPrompts.set(id, prompt);
     return prompt;
   }
