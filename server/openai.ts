@@ -40,8 +40,9 @@ type ChatCompletionMessageParam =
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000, // 30 seconds timeout
-  maxRetries: 3 // limit retries to 3 times
+  timeout: 60000, // 60 seconds timeout
+  maxRetries: 2, // limit retries to 2 times
+  maxConcurrency: 5 // limit concurrent requests
 });
 
 // Generate welcome message based on system prompt
@@ -59,6 +60,10 @@ export async function generateSystemPrompt(prompt: string, promptTitle: string):
     const response = await openai.chat.completions.create({
       model: model,
       messages: messages,
+      max_tokens: 1000, // 限制回應長度
+      temperature: 0.7, // 降低創意性提高響應速度
+      presence_penalty: 0,
+      frequency_penalty: 0,
     });
 
     return response.choices[0].message.content || 
