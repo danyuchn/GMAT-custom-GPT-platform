@@ -142,9 +142,25 @@ export default function Chat() {
       
       // 查找相應的system prompt ID
       if (systemPrompts && systemPrompts.length > 0) {
-        // 遍歷系統提示並尋找與功能名稱匹配的
+        // 基於功能關鍵字匹配相應的系統提示類別
+        let promptCategory = "";
+        
+        // 數學相關功能
+        if (["simple_explain", "quick_solve", "variant_question", "concept_explanation", "pattern_recognition"].includes(func.key)) {
+          promptCategory = "Quant";
+        } 
+        // 語言相關功能
+        else if (["quick_solve_cr_tpa", "quick_solve_rc", "mind_map", "approach_diagnosis", "logical_term_explanation"].includes(func.key)) {
+          promptCategory = "Verbal";
+        } 
+        // 圖表相關功能
+        else {
+          promptCategory = "Graph";
+        }
+        
+        // 根據類別查找提示
         const promptData = systemPrompts.find((p: SystemPrompt) => 
-          p.title.includes(func.title)
+          p.title.includes(promptCategory)
         );
         
         if (promptData) {

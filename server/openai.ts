@@ -68,16 +68,29 @@ export async function generateSystemPrompt(prompt: string, promptTitle: string):
 // Determine which model to use based on prompt category
 export function determineModel(promptTitle: string): string {
   // 對於數學題型使用o3-mini，其他類型使用gpt-4o
-  const mathRelatedKeywords = ['quant', 'math', '數學'];
+  if (!promptTitle) {
+    console.log("No promptTitle provided, defaulting to gpt-4o");
+    return "gpt-4o";
+  }
+  
+  const mathRelatedKeywords = ['quant', 'math', '數學', 'Quant'];
+  const graphRelatedKeywords = ['graph', 'chart', '圖表', 'Graph'];
+  
+  // 檢查是否為數學相關提示
   const isMathRelated = mathRelatedKeywords.some(keyword => 
     promptTitle.toLowerCase().includes(keyword.toLowerCase())
   );
   
-  if (isMathRelated || promptTitle.includes("Quant")) {
-    console.log("Using o3-mini for math-related topic");
+  // 檢查是否為圖表相關提示（可能也包含數學內容）
+  const isGraphRelated = graphRelatedKeywords.some(keyword => 
+    promptTitle.toLowerCase().includes(keyword.toLowerCase())
+  );
+  
+  if (isMathRelated || isGraphRelated) {
+    console.log(`Using o3-mini for topic: ${promptTitle}`);
     return "o3-mini";
   } else {
-    console.log("Using gpt-4o for non-math topic");
+    console.log(`Using gpt-4o for topic: ${promptTitle}`);
     return "gpt-4o";
   }
 }

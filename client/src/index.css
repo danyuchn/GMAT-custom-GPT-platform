@@ -16,36 +16,41 @@
 .katex-block {
   overflow-x: auto;
   overflow-y: hidden;
-  margin: 1em 0;
+  margin: 1.5em 0;
   padding: 0.5em 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
-/* 使KaTeX在暗模式下顯示正常 */
+/* 使KaTeX在各種模式下顯示正常 */
 .katex {
-  text-rendering: auto;
-  font: normal 1.1em KaTeX_Main, Times New Roman, serif;
-  line-height: 1.2;
-  text-indent: 0;
-  max-width: 100%;
+  text-rendering: auto !important;
+  font: normal 1.1em KaTeX_Main, Times New Roman, serif !important;
+  line-height: 1.2 !important;
+  text-indent: 0 !important;
+  max-width: 100% !important;
 }
 
 /* 避免數學公式與文本之間間距過小 */
 .katex-display {
   margin: 1em 0 !important;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  max-width: 100% !important;
+  padding: 0 !important;
 }
 
 /* 數學公式背景 */
 .katex-display > .katex {
-  display: inline-block;
-  text-align: center;
-  width: 100%;
+  display: inline-block !important;
+  text-align: center !important;
+  width: 100% !important;
 }
 
 /* KaTeX渲染的公式在深色模式下的樣式 */
 .prose-invert .katex {
-  color: white;
+  color: white !important;
 }
 
 /* 防止長公式打破布局 */
@@ -53,4 +58,28 @@
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+/* 確保數學公式居中顯示 */
+.katex-html {
+  display: block !important;
+  position: relative !important;
+  white-space: normal !important;
+  text-align: center !important;
+}
+
+/* 處理長公式換行問題 */
+.katex-html > .tag {
+  position: relative !important;
+}
+
+/* 調整KaTeX內部元素間距 */
+.katex .base {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 確保分數線正確顯示 */
+.katex .frac-line {
+  border-bottom-width: 1px !important;
 }
