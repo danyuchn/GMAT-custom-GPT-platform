@@ -2,26 +2,65 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChatFunction, chatFunctions } from "./chat-function-selector";
-import { Sparkles, Lightbulb, Copy, BookOpen, Search, ExternalLink, MapPin, FileBarChart2, HelpCircle, Undo2 } from "lucide-react";
+import { 
+  Sparkles, Lightbulb, Copy, BookOpen, Search, ExternalLink, 
+  MapPin, FileBarChart2, HelpCircle, Undo2, Calculator, 
+  BrainCircuit, Compass, BarChart3, BookText, Asterisk,
+  ListChecks, Footprints
+} from "lucide-react";
 
-// Icon mapping for each function type
+// Enhanced icon mapping for each function type with specific colors
 const iconMap: Record<string, any> = {
-  simple_explain: Sparkles,
-  quick_solve: Lightbulb,
-  variant_question: Copy,
-  concept_explanation: BookOpen,
-  pattern_recognition: Search,
-  quick_solve_cr_tpa: ExternalLink,
-  quick_solve_rc: ExternalLink,
-  mind_map: MapPin,
-  approach_diagnosis: FileBarChart2,
-  logical_term_explanation: HelpCircle,
+  // 數學題型功能
+  simple_explain: { icon: Lightbulb, color: "text-amber-500" },
+  quick_solve: { icon: Sparkles, color: "text-cyan-500" },
+  variant_question: { icon: Asterisk, color: "text-indigo-500" },
+  concept_explanation: { icon: BrainCircuit, color: "text-purple-500" },
+  pattern_recognition: { icon: Compass, color: "text-fuchsia-500" },
+  
+  // 語言題型功能
+  quick_solve_cr_tpa: { icon: Sparkles, color: "text-blue-500" },
+  quick_solve_rc: { icon: BookText, color: "text-emerald-500" },
+  mind_map: { icon: MapPin, color: "text-teal-500" },
+  approach_diagnosis: { icon: ListChecks, color: "text-rose-500" },
+  logical_term_explanation: { icon: HelpCircle, color: "text-violet-500" },
+  
+  // 圖表題型功能相關
+  graph_default: { icon: BarChart3, color: "text-orange-500" }
 };
 
 interface FunctionCardsProps {
   onSelect: (prompt: string) => void;
   selectedFunction: string | null;
 }
+
+// 功能卡片組件
+const FunctionCard = ({ func, isSelected, onSelect }: { 
+  func: ChatFunction, 
+  isSelected: boolean, 
+  onSelect: () => void 
+}) => {
+  const iconData = iconMap[func.key] || iconMap.graph_default;
+  const Icon = iconData.icon || Undo2;
+
+  return (
+    <Card 
+      key={func.key} 
+      className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary' : 'hover:shadow-md'}`}
+      onClick={onSelect}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">{func.title}</CardTitle>
+          <Icon className={`h-5 w-5 ${iconData.color}`} />
+        </div>
+        <CardDescription className="text-xs line-clamp-2">
+          {func.description}
+        </CardDescription>
+      </CardHeader>
+    </Card>
+  );
+};
 
 export default function FunctionCards({ onSelect, selectedFunction }: FunctionCardsProps) {
   // Get the current prompt ID from URL
@@ -57,24 +96,12 @@ export default function FunctionCards({ onSelect, selectedFunction }: FunctionCa
           <h3 className="text-lg font-medium mb-3">量化題型功能</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {quantFunctions.map((func) => (
-              <Card 
-                key={func.key} 
-                className={`cursor-pointer transition-all ${selectedFunction === func.key ? 'ring-2 ring-primary' : 'hover:shadow-md'}`}
-                onClick={() => handleSelect(func)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{func.title}</CardTitle>
-                    {(() => {
-                      const Icon = iconMap[func.key] || Undo2;
-                      return <Icon className="h-5 w-5 text-primary" />;
-                    })()}
-                  </div>
-                  <CardDescription className="text-xs line-clamp-2">
-                    {func.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+              <FunctionCard 
+                key={func.key}
+                func={func}
+                isSelected={selectedFunction === func.key}
+                onSelect={() => handleSelect(func)}
+              />
             ))}
           </div>
         </div>
@@ -85,24 +112,12 @@ export default function FunctionCards({ onSelect, selectedFunction }: FunctionCa
           <h3 className="text-lg font-medium mb-3">語言題型功能</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {verbalFunctions.map((func) => (
-              <Card 
-                key={func.key} 
-                className={`cursor-pointer transition-all ${selectedFunction === func.key ? 'ring-2 ring-primary' : 'hover:shadow-md'}`}
-                onClick={() => handleSelect(func)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{func.title}</CardTitle>
-                    {(() => {
-                      const Icon = iconMap[func.key] || Undo2;
-                      return <Icon className="h-5 w-5 text-primary" />;
-                    })()}
-                  </div>
-                  <CardDescription className="text-xs line-clamp-2">
-                    {func.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+              <FunctionCard 
+                key={func.key}
+                func={func}
+                isSelected={selectedFunction === func.key}
+                onSelect={() => handleSelect(func)}
+              />
             ))}
           </div>
         </div>
@@ -113,24 +128,12 @@ export default function FunctionCards({ onSelect, selectedFunction }: FunctionCa
           <h3 className="text-lg font-medium mb-3">圖表題型功能</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {graphFunctions.map((func) => (
-              <Card 
-                key={func.key} 
-                className={`cursor-pointer transition-all ${selectedFunction === func.key ? 'ring-2 ring-primary' : 'hover:shadow-md'}`}
-                onClick={() => handleSelect(func)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{func.title}</CardTitle>
-                    {(() => {
-                      const Icon = iconMap[func.key] || Undo2;
-                      return <Icon className="h-5 w-5 text-primary" />;
-                    })()}
-                  </div>
-                  <CardDescription className="text-xs line-clamp-2">
-                    {func.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+              <FunctionCard 
+                key={func.key}
+                func={func}
+                isSelected={selectedFunction === func.key}
+                onSelect={() => handleSelect(func)}
+              />
             ))}
           </div>
         </div>
