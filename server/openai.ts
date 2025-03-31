@@ -38,7 +38,11 @@ type ChatCompletionMessageParam =
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000, // 30 seconds timeout
+  maxRetries: 3 // limit retries to 3 times
+});
 
 // Generate welcome message based on system prompt
 export async function generateSystemPrompt(prompt: string, promptTitle: string): Promise<string> {
@@ -76,14 +80,12 @@ export function determineModel(promptTitle: string): string {
   const mathRelatedKeywords = ['quant', 'math', '數學', 'Quant'];
   const graphRelatedKeywords = ['graph', 'chart', '圖表', 'Graph'];
   
-  // 檢查是否為數學相關提示
+  const promptLower = promptTitle.toLowerCase();
   const isMathRelated = mathRelatedKeywords.some(keyword => 
-    promptTitle.toLowerCase().includes(keyword.toLowerCase())
+    promptLower.includes(keyword.toLowerCase())
   );
-  
-  // 檢查是否為圖表相關提示（可能也包含數學內容）
   const isGraphRelated = graphRelatedKeywords.some(keyword => 
-    promptTitle.toLowerCase().includes(keyword.toLowerCase())
+    promptLower.includes(keyword.toLowerCase())
   );
   
   if (isMathRelated || isGraphRelated) {
