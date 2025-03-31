@@ -2,11 +2,14 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { apiRequest } from "./queryClient";
 import { type User } from "@shared/schema";
 
+// 定義UserWithoutPassword類型，它是User類型但不包含password字段
+type UserWithoutPassword = Omit<User, 'password'>;
+
 interface AuthContextType {
-  user: User | null;
+  user: UserWithoutPassword | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (userData: User) => void;
+  login: (userData: UserWithoutPassword) => void;
   logout: () => void;
 }
 
@@ -14,7 +17,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
-  login: (userData: User) => {},
+  login: (userData: UserWithoutPassword) => {},
   logout: () => {},
 });
 
@@ -25,7 +28,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserWithoutPassword | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Check if user is already logged in
@@ -42,7 +45,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         if (response.ok) {
           const userData = await response.json();
-          setUser(userData);
+          setUser(userData as UserWithoutPassword);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -54,7 +57,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     checkAuthStatus();
   }, []);
 
-  const login = (userData: User) => {
+  const login = (userData: UserWithoutPassword) => {
     setUser(userData);
   };
 

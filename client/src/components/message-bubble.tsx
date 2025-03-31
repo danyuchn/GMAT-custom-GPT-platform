@@ -1,19 +1,64 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
 import { type Message } from "@shared/schema";
 import { LightbulbIcon } from "lucide-react";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 interface MessageBubbleProps {
   message: Message;
   isLast: boolean;
 }
 
+// 用於處理並渲染LaTeX數學公式
+const renderLatex = (content: string): string => {
+  // 使用正則表達式找出所有的LaTeX公式
+  // 匹配 $...$ 用於行內公式
+  // 匹配 $$...$$ 用於獨立公式
+  const inlineRegex = /\$(.*?)\$/g;
+  const blockRegex = /\$\$(.*?)\$\$/g;
+  
+  // 先將換行符轉換成<br>標籤
+  let processedContent = content.replace(/\n/g, '<br>');
+  
+  // 處理獨立公式
+  processedContent = processedContent.replace(blockRegex, (match, latex) => {
+    try {
+      return `<div class="katex-block">${katex.renderToString(latex, { displayMode: true })}</div>`;
+    } catch (error) {
+      console.error('KaTeX渲染錯誤:', error);
+      return match; // 如果渲染失敗，保留原始文本
+    }
+  });
+  
+  // 處理行內公式
+  processedContent = processedContent.replace(inlineRegex, (match, latex) => {
+    // 忽略已經處理過的獨立公式
+    if (match.startsWith('$$')) return match;
+    
+    try {
+      return katex.renderToString(latex, { displayMode: false });
+    } catch (error) {
+      console.error('KaTeX渲染錯誤:', error);
+      return match; // 如果渲染失敗，保留原始文本
+    }
+  });
+  
+  return processedContent;
+};
+
 export default function MessageBubble({ message, isLast }: MessageBubbleProps) {
   const { user } = useAuth();
+  const contentRef = useRef<HTMLDivElement>(null);
   
   const initials = useMemo(() => {
-    return user?.username ? user.username.substring(0, 2).toUpperCase() : "U";
+    // Type assertion to help TypeScript understand the structure
+    const typedUser = user as { username?: string } | null;
+    if (typedUser && typedUser.username) {
+      return typedUser.username.substring(0, 2).toUpperCase();
+    }
+    return "U";
   }, [user]);
 
   if (message.isUserMessage) {
@@ -46,7 +91,11 @@ export default function MessageBubble({ message, isLast }: MessageBubbleProps) {
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-sm px-4 py-5 border border-accent max-w-[80%]">
-          <div className="text-sm text-gray-700 prose prose-sm" dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, '<br>') }} />
+          <div 
+            ref={contentRef}
+            className="text-sm text-gray-700 prose prose-sm" 
+            dangerouslySetInnerHTML={{ __html: renderLatex(message.content) }} 
+          />
         </div>
       </div>
     </div>

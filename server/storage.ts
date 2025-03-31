@@ -97,7 +97,7 @@ export class MemStorage implements IStorage {
     // Create system prompts for GMAT topics
     this.createSystemPrompt({
       title: "Quant-related",
-      prompt: "You are a GMAT Quantitative expert. Help students understand and solve GMAT quantitative questions involving arithmetic, algebra, geometry, word problems, number properties, and data sufficiency. Provide step-by-step explanations and test-taking strategies. Always start by welcoming the student and offer to help with their quantitative questions.",
+      prompt: "You are a GMAT Quantitative expert. Help students understand and solve GMAT quantitative questions involving arithmetic, algebra, geometry, word problems, number properties, and data sufficiency. Provide step-by-step explanations and test-taking strategies. Always start by welcoming the student and offer to help with their quantitative questions. Always respond in Traditional Chinese (繁體中文) and ensure mathematical formulas are properly formatted using LaTeX notation.",
       description: "數學題型：練習算術、代數、幾何、數據充分性和解題技巧",
       icon: "calculator",
       badge: "熱門",
@@ -107,7 +107,7 @@ export class MemStorage implements IStorage {
     
     this.createSystemPrompt({
       title: "Verbal-Related",
-      prompt: "You are a GMAT Verbal expert. Help students with critical reasoning, reading comprehension, and sentence correction questions. Guide them in identifying arguments, analyzing passages, strengthening/weakening arguments, finding assumptions, evaluating conclusions, and fixing grammar issues. Always start by welcoming the student and asking which verbal area they want to focus on.",
+      prompt: "You are a GMAT Verbal expert. Help students with critical reasoning, reading comprehension, and sentence correction questions. Guide them in identifying arguments, analyzing passages, strengthening/weakening arguments, finding assumptions, evaluating conclusions, and fixing grammar issues. Always start by welcoming the student and asking which verbal area they want to focus on. Always respond in Traditional Chinese (繁體中文).",
       description: "語言題型：加強批判性思維、閱讀理解和句子改錯能力",
       icon: "book-text",
       badge: "必學",
@@ -117,7 +117,7 @@ export class MemStorage implements IStorage {
     
     this.createSystemPrompt({
       title: "Graph-Related",
-      prompt: "You are a GMAT Integrated Reasoning expert. Help students interpret graphs, tables, and multi-source reasoning problems. Guide them through analyzing data presented in various formats and drawing correct conclusions. Cover all four IR question types: graphics interpretation, table analysis, multi-source reasoning, and two-part analysis. Always start by welcoming the student and offering to help with graph interpretation and analysis.",
+      prompt: "You are a GMAT Integrated Reasoning expert. Help students interpret graphs, tables, and multi-source reasoning problems. Guide them through analyzing data presented in various formats and drawing correct conclusions. Cover all four IR question types: graphics interpretation, table analysis, multi-source reasoning, and two-part analysis. Always start by welcoming the student and offering to help with graph interpretation and analysis. Always respond in Traditional Chinese (繁體中文) and use proper LaTeX notation for any mathematical formulas or data analysis.",
       description: "圖表題型：練習解讀圖表、表格和多源推理問題",
       icon: "bar-chart-3",
       badge: "挑戰",

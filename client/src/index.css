@@ -11,3 +11,33 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* 數學公式相關樣式 */
+.katex-block {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 1em 0;
+  padding: 0.5em 0;
+}
+
+/* 使KaTeX在暗模式下顯示正常 */
+.katex {
+  text-rendering: auto;
+  font: normal 1.1em KaTeX_Main, Times New Roman, serif;
+  line-height: 1.2;
+  text-indent: 0;
+}
+
+/* 公式間距調整 */
+.katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* 數學公式背景 */
+.katex-display > .katex {
+  display: inline-block;
+  text-align: center;
+  width: 100%;
+}

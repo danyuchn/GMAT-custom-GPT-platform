@@ -18,7 +18,7 @@ type ChatCompletionMessageParam = {
 // Extend express-session
 declare module "express-session" {
   interface SessionData {
-    user?: User;
+    user?: Omit<User, 'password'>;
   }
 }
 
@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password: _, ...userWithoutPassword } = user;
       
       // Set user in session
-      req.session.user = userWithoutPassword;
+      req.session.user = userWithoutPassword as Omit<User, 'password'>;
       
       res.json(userWithoutPassword);
     } catch (error) {
@@ -117,6 +117,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     if (req.session.user) {
+      // TypeScript 斷言 - 中間件確保user存在
+      req.session.user = req.session.user as Omit<User, 'password'>;
       next();
     } else {
       res.status(401).json({ message: "Not authenticated" });
@@ -157,7 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/conversations", isAuthenticated, async (req, res) => {
     try {
       const { systemPromptId } = req.body;
-      const userId = req.session.user.id;
+      // isAuthenticated中間件確保了req.session.user存在
+      const userId = req.session.user!.id;
       
       // Validate input
       if (!systemPromptId) {
@@ -202,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/conversations", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.session.user!.id;
       const conversations = await storage.getConversationsByUserId(userId);
       res.json(conversations);
     } catch (error) {
@@ -212,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/conversations/active/:systemPromptId", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.session.user!.id;
       const systemPromptId = parseInt(req.params.systemPromptId);
       
       // Get active conversation or create new one
@@ -254,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/conversations/:id", isAuthenticated, async (req, res) => {
     try {
       const conversationId = parseInt(req.params.id);
-      const userId = req.session.user.id;
+      const userId = req.session.user!.id;
       
       const conversation = await storage.getConversation(conversationId);
       
@@ -263,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user owns the conversation
-      if (conversation.userId !== userId && !req.session.user.isAdmin) {
+      if (conversation.userId !== userId && !req.session.user!.isAdmin) {
         return res.status(403).json({ message: "Not authorized" });
       }
       
@@ -276,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/conversations/:id/messages", isAuthenticated, async (req, res) => {
     try {
       const conversationId = parseInt(req.params.id);
-      const userId = req.session.user.id;
+      const userId = req.session.user!.id;
       
       // Check if user owns the conversation
       const conversation = await storage.getConversation(conversationId);
@@ -285,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Conversation not found" });
       }
       
-      if (conversation.userId !== userId && !req.session.user.isAdmin) {
+      if (conversation.userId !== userId && !req.session.user!.isAdmin) {
         return res.status(403).json({ message: "Not authorized" });
       }
       
@@ -299,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/conversations/:id/messages", isAuthenticated, async (req, res) => {
     try {
       const conversationId = parseInt(req.params.id);
-      const userId = req.session.user.id;
+      const userId = req.session.user!.id;
       
       // Check if user owns the conversation
       const conversation = await storage.getConversation(conversationId);
@@ -349,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         prompt,
         userMessages,
         systemPrompt.title,
-        lastAssistantMessage?.responseId
+        lastAssistantMessage?.responseId || undefined
       );
       
       // Save AI response with its response ID for future continuity
