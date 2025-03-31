@@ -71,6 +71,7 @@ export const messages = pgTable("messages", {
   conversationId: integer("conversation_id").notNull(),
   content: text("content").notNull(),
   isUserMessage: boolean("is_user_message").notNull(),
+  responseId: text("response_id"),  // OpenAI response ID for message continuity
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -78,6 +79,7 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
   conversationId: true,
   content: true,
   isUserMessage: true,
+  responseId: true,
 });
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;

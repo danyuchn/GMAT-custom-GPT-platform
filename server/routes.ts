@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { insertUserSchema, insertMessageSchema, insertConversationSchema, type User } from "../shared/schema";
-import { generateSystemPrompt } from "./openai";
+import { generateSystemPrompt, determineModel, chatWithAI } from "./openai";
 import { SessionData } from "express-session";
 
 // Importing OpenAI types
@@ -156,11 +156,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Conversations routes
   app.post("/api/conversations", isAuthenticated, async (req, res) => {
     try {
-      const { systemPromptId, model } = req.body;
+      const { systemPromptId } = req.body;
       const userId = req.session.user.id;
       
       // Validate input
-      if (!systemPromptId || !model) {
+      if (!systemPromptId) {
         return res.status(400).json({ message: "Missing required fields" });
       }
       
@@ -169,6 +169,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!systemPrompt) {
         return res.status(404).json({ message: "System prompt not found" });
       }
+      
+      // Determine appropriate model based on prompt content
+      const model = determineModel(systemPrompt.title);
       
       // Create conversation
       const conversationData = insertConversationSchema.parse({
@@ -222,15 +225,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "System prompt not found" });
         }
         
+        // Determine appropriate model based on prompt content
+        const model = determineModel(systemPrompt.title);
+        
         // Create new conversation
         conversation = await storage.createConversation({
           userId,
           systemPromptId,
-          model: "o3-mini", // Default model
+          model,
         });
         
         // Create welcome message from AI
-        const welcomeMessage = await generateSystemPrompt(systemPrompt.prompt, "o3-mini");
+        const welcomeMessage = await generateSystemPrompt(systemPrompt.prompt, systemPrompt.title);
         
         await storage.createMessage({
           conversationId: conversation.id,
@@ -322,8 +328,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.createMessage(messageData);
       
-      // Get all messages for the conversation
+      // Get all messages for the conversation including the latest one
       const messages = await storage.getMessagesByConversationId(conversationId);
+      
+      // Get the last assistant message to use its response ID for continuity
+      const lastAssistantMessage = messages
+        .filter(msg => !msg.isUserMessage)
+        .pop();
       
       // Generate AI response
       const prompt = systemPrompt.prompt;
@@ -332,26 +343,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: msg.content
       } as ChatCompletionMessageParam));
       
-      const systemMessage: ChatCompletionMessageParam = { 
-        role: "system", 
-        content: prompt 
-      };
+      // Use chatWithAI with previous_response_id for better context management
+      const aiResponse = await chatWithAI(
+        prompt,
+        userMessages,
+        systemPrompt.title,
+        lastAssistantMessage?.responseId
+      );
       
-      const response = await openai.chat.completions.create({
-        model: conversation.model,
-        messages: [
-          systemMessage,
-          ...userMessages
-        ],
-      });
-      
-      const aiContent = response.choices[0].message.content || "I'm not sure how to respond to that.";
-      
-      // Save AI response
+      // Save AI response with its response ID for future continuity
       const aiMessageData = insertMessageSchema.parse({
         conversationId,
-        content: aiContent,
+        content: aiResponse.content,
         isUserMessage: false,
+        responseId: aiResponse.id
       });
       
       const aiMessage = await storage.createMessage(aiMessageData);
