@@ -176,26 +176,12 @@ export async function chatWithAI(
     let completionParams: any;
     
     if (model === "o3-mini") {
-      // o3-mini 使用特殊格式
+      // o3-mini 模型使用不同的參數
       completionParams = {
-        model: "o3-mini",
-        input: [{
-          role: "developer",
-          content: [{
-            type: "input_text",
-            text: systemMessage.content
-          }]
-        }],
-        text: {
-          format: {
-            type: "text"
-          }
-        },
-        reasoning: {
-          effort: "medium"
-        },
-        tools: [],
-        store: true
+        model: model,
+        messages: apiMessages,
+        max_completion_tokens: 1000
+        // 不添加temperature, max_tokens等參數
       };
     } else {
       // 其他模型使用標準參數
@@ -203,9 +189,10 @@ export async function chatWithAI(
         model: model,
         messages: apiMessages,
         max_tokens: 1000,
-      completionParams.temperature = 0.7;
-      completionParams.presence_penalty = 0;
-      completionParams.frequency_penalty = 0;
+        temperature: 0.7,
+        presence_penalty: 0,
+        frequency_penalty: 0
+      };
     }
     
     // 只有在提供了之前的響應ID時，才添加context參數
@@ -218,57 +205,20 @@ export async function chatWithAI(
       paramKeys: Object.keys(completionParams)
     }));
     
-    const response = model === "o3-mini" 
-      ? await openai.responses.create(completionParams)
-      : await openai.chat.completions.create(completionParams);
+    // 所有模型都使用 chat.completions API
+    const response = await openai.chat.completions.create(completionParams);
 
     return {
-      content: model === "o3-mini"
-        ? response.text || "I'm sorry, I couldn't generate a response. Please try again."
-        : response.choices[0].message.content || "I'm sorry, I couldn't generate a response. Please try again.",
+      content: response.choices[0].message.content || 
+        "I'm sorry, I couldn't generate a response. Please try again.",
       id: response.id || ""
     };
   } catch (error) {
-    // Log detailed error information
-    console.error("Error chatting with AI:", {
-      error: error instanceof Error ? error.message : error,
-      model: model,
-      params: completionParams
-    });
-
-    // Check for specific error types
-    if (error instanceof OpenAI.APIError) {
-      console.error("OpenAI API Error:", {
-        status: error.status,
-        message: error.message,
-        code: error.code,
-        type: error.type
-      });
-      
-      if (error.status === 429) {
-        return {
-          content: "The service is currently busy. Please try again in a moment.",
-          id: ""
-        };
-      }
-      
-      if (error.code === 'timeout') {
-        return {
-          content: "The response took too long. Please try a shorter question.",
-          id: ""
-        };
-      }
-    }
-
-    if (error instanceof Error && error.message.includes('timeout')) {
-      return {
-        content: "The request timed out. Please try again with a simpler question.",
-        id: ""
-      };
-    }
-
+    // 記錄錯誤
+    console.error("Error chatting with AI:", error);
+    
     return {
-      content: "The AI service is temporarily unavailable. Please try again in a moment.",
+      content: "I'm sorry, there was an error processing your request. Please try again.",
       id: ""
     };
   }
