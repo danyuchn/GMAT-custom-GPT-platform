@@ -46,18 +46,32 @@ export default function Login() {
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/auth/login", {
-        email: data.email,
-        password: data.password,
+      // Using direct fetch instead of apiRequest to handle error response
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+        }),
+        credentials: "include",
       });
       
+      const responseData = await response.json();
+      
       if (response.ok) {
-        const userData = await response.json();
-        login(userData);
+        login(responseData);
         navigate("/");
         toast({
           title: "Login successful",
           description: "Welcome back to GMAT AI Assistant",
+        });
+      } else {
+        // Handle error from server
+        toast({
+          title: "Login failed",
+          description: responseData.message || "Please check your credentials and try again",
+          variant: "destructive",
         });
       }
     } catch (error) {
