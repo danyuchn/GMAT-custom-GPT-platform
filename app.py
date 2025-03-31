@@ -380,6 +380,23 @@ def handle_chat(category, template_name):
         user_input = request.form.get("user_input")
         instruction = request.form.get("instruction", "simple_explain")
         
+        # 如果是空的 user_input，只更新 system prompt
+        if user_input == "":
+            chat_id = session['active_chat_id']
+            Message.query.filter_by(chat_id=chat_id, role="system").delete()
+            
+            system_message = init_conversation(instruction)[0]
+            new_system_message = Message(
+                chat_id=chat_id,
+                role=system_message["role"],
+                content=system_message["content"]
+            )
+            db.session.add(new_system_message)
+            db.session.commit()
+            
+            messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+            return render_template(template_name, messages=messages, api_balance=current_balance)
+        
         if user_input:
             # 檢查用戶餘額是否足夠
             has_balance, balance = token_manager.check_balance(current_user.id)

@@ -35,24 +35,7 @@
 {% endblock %}
 
 {% block extra_css %}
-<style>
-    /* 確保 AI 回覆自動換行 */
-    .message-body {
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        word-break: break-word;
-        max-width: 100%;
-        overflow-wrap: break-word;
-    }
-    
-    /* 確保代碼塊不會破壞佈局 */
-    .message-body pre, .message-body code {
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        max-width: 100%;
-        overflow-x: auto;
-    }
-</style>
+<!-- 移除會導致字體大小不一致的樣式 -->
 {% endblock %}
 
 {% block extra_js %}
