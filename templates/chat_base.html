@@ -24,6 +24,38 @@
             white-space: normal !important;
         }
         
+        /* 專門處理數字和數學表達式 */
+        .message-body,
+        .message-body *,
+        .message-body *::before,
+        .message-body *::after {
+            font-size: 16px !important;
+            line-height: 1.6 !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        }
+        
+        /* 遞歸處理所有可能的元素及其子元素 */
+        .message-body * {
+            font-size: 16px !important;
+        }
+        
+        /* 確保所有可能渲染數學表達式的元素都統一大小 */
+        .message-body span,
+        .message-body sup,
+        .message-body sub,
+        .message-body i,
+        .message-body em,
+        .message-body b,
+        .message-body strong,
+        .message-body .MathJax,
+        .message-body .MathJax_Display,
+        .message-body mjx-container,
+        .message-body .mjx-math {
+            font-size: 16px !important;
+            line-height: 1.6 !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        }
+        
         /* 專門針對第一段文字的強制樣式 - 更強大的選擇器 */
         html body .chat-container .chat-body .message .message-content .message-body > p:first-child, 
         html body .chat-container .chat-body .message .message-content .message-body > div:first-child,
@@ -56,6 +88,20 @@
             word-break: break-word !important;
             display: block !important;
         }
+        
+        /* 特別針對 AI 助手消息第一段的處理 */
+        html body .assistant-message .message-content .message-body > p:first-child,
+        html body .assistant-message .message-content .message-body > div:first-child,
+        html body .assistant-message .message-content .message-body > span:first-child,
+        html body .assistant-message .message-body > *:first-child,
+        .assistant-message .message-body > p:first-child,
+        .assistant-message .message-body > div:first-child,
+        .assistant-message .message-body > span:first-child,
+        .assistant-message .message-body > *:first-child {
+            margin-top: 10px !important; /* 添加頂部間距，與AI助手標題分開 */
+            font-size: 16px !important;
+            line-height: 1.6 !important;
+        }
 
         /* 代碼元素特殊處理 */
         html body .message-body pre,
@@ -83,41 +129,176 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <!-- 添加 MathJax 配置 -->
     <script>
+        // 配置 marked.js
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            pedantic: false,
+            mangle: false,
+            headerIds: false,
+            highlight: function(code, lang) {
+                // 只在明確指定語言時才進行程式碼高亮
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                // 如果沒有指定語言，直接返回原始文本，不進行高亮
+                return code;
+            }
+        });
+
+        // 統一的 MathJax 配置
         window.MathJax = {
+            loader: {load: ['[tex]/unicode']},
             tex: {
                 inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                packages: {'[+]': ['unicode']}
             },
-            svg: {
-                fontCache: 'global'
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+                processHtmlClass: 'math-tex'
+            },
+            startup: {
+                pageReady: () => {
+                    return MathJax.startup.defaultPageReady().then(() => {
+                        document.querySelectorAll('.MathJax').forEach(el => {
+                            el.style.fontSize = '16px';
+                        });
+                    });
+                }
             }
         };
-    </script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <style>
-        /* 全局樣式重置，確保子模板無法覆蓋 */
-        body .chat-container .chat-body .message .message-content .message-body,
-        body .chat-container .chat-body .message .message-content .message-body *,
-        .message-body,
-        .message-body * {
-            box-sizing: border-box !important;
-            max-width: 100% !important;
-            overflow-wrap: break-word !important;
-            word-wrap: break-word !important;
-            word-break: break-word !important;
+
+        // 處理換行和數學公式的函數
+        function preprocessContent(content) {
+            // 1. 保護數學公式
+            const mathExpressions = [];
+            content = content.replace(/(\$\$[\s\S]*?\$\$|\$[^\$\n]+\$|\\\[[\s\S]*?\\\]|\\\([^\\\)]+\\\))/g, (match) => {
+                mathExpressions.push(match);
+                return `@@MATH${mathExpressions.length - 1}@@`;
+            });
+
+            // 2. 處理換行，確保段落之間有空行
+            content = content.replace(/\r\n|\r|\n/g, '\n');  // 統一換行符
+            content = content.replace(/\n\s*\n/g, '\n\n');   // 將多個空行轉換為單個空行
+            content = content.replace(/\n(?!\n)/g, '  \n');  // 為單行換行添加兩個空格（Markdown 語法）
+
+            // 3. 恢復數學公式
+            content = content.replace(/@@MATH(\d+)@@/g, (_, index) => mathExpressions[index]);
+
+            return content;
         }
 
-        /* 保證英文文本能夠正確換行 */
-        body .chat-container .chat-body .message .message-content .message-body,
-        .message-body {
-            white-space: normal !important;
-            font-size: 16px !important;
-            line-height: 1.6 !important;
-            letter-spacing: normal !important;
+        // 改進的消息處理函數
+        function processMessage(messageBody) {
+            if (!messageBody || messageBody.dataset.processed === 'true') return;
+
+            let content = messageBody.innerHTML;
+            
+            // 檢查是否為 AI 助手的消息
+            const isAssistantMessage = messageBody.closest('.assistant-message') !== null;
+            
+            // 預處理內容
+            content = preprocessContent(content);
+            
+            // 檢查內容是否為純文字（不包含任何 Markdown 標記）
+            const isPlainText = !content.match(/[*_`#\[\]]/);
+            
+            if (isPlainText || (isAssistantMessage && !content.includes('```'))) {
+                // 如果是純文字或是 AI 助手的非程式碼回覆，直接處理換行
+                content = content.split('\n').map(line => `<p>${line}</p>`).join('');
+            } else {
+                // 使用 marked 處理 Markdown
+                content = marked.parse(content);
+            }
+            
+            // 更新內容
+            messageBody.innerHTML = content;
+
+            // 觸發 MathJax 渲染
+            if (window.MathJax) {
+                MathJax.typesetPromise([messageBody]).catch(err => {
+                    console.error('MathJax 渲染錯誤:', err);
+                });
+            }
+
+            // 標記為已處理
+            messageBody.dataset.processed = 'true';
         }
-        
+
+        // 改進的表單提交處理
+        function setupFormHandler() {
+            const form = document.getElementById('chat-form');
+            const userInput = document.getElementById('user-input');
+            const loadingMessage = document.getElementById('loading-message');
+            const chatMessages = document.getElementById('chat-messages');
+
+            if (form) {
+                form.addEventListener('submit', function(event) {
+                    const input = userInput.value.trim();
+                    if (input) {
+                        // 不需要預處理用戶輸入，保持原始格式
+                        if (loadingMessage) {
+                            const now = new Date();
+                            document.getElementById('loading-time').textContent = 
+                                `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                            loadingMessage.style.display = 'block';
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                    }
+                });
+            }
+        }
+
+        // 改進的觀察器設置
+        function setupMessageObserver() {
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (node.classList && node.classList.contains('message')) {
+                                const messageBody = node.querySelector('.message-body');
+                                if (messageBody) {
+                                    setTimeout(() => processMessage(messageBody), 0);
+                                }
+                            }
+                            node.querySelectorAll('.message-body').forEach(body => {
+                                setTimeout(() => processMessage(body), 0);
+                            });
+                        }
+                    });
+                });
+            });
+
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages) {
+                observer.observe(chatMessages, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        }
+
+        // 頁面初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 處理現有消息
+            document.querySelectorAll('.message-body').forEach(messageBody => {
+                setTimeout(() => processMessage(messageBody), 0);
+            });
+            
+            // 設置表單處理
+            setupFormHandler();
+            
+            // 設置觀察器
+            setupMessageObserver();
+        });
+    </script>
+    <style>
+        /* 全局樣式重置，確保子模板無法覆蓋 */
         :root {
+            /* 顏色變量 */
             --primary-color: #4361ee;
             --secondary-color: #3a0ca3;
             --accent-color: #7209b7;
@@ -126,6 +307,158 @@
             --user-msg-color: #e7f5ff;
             --ai-msg-color: #f0f7ff;
             --system-msg-color: #fff8e6;
+            --border-color: rgba(0,0,0,0.1);
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            
+            /* 字體大小變量 */
+            --font-size-base: 16px;
+            --font-size-sm: 14px;
+            --font-size-lg: 18px;
+            --font-size-xl: 24px;
+            
+            /* 間距變量 */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            
+            /* 字體系列 */
+            --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --font-family-code: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+            
+            /* 其他變量 */
+            --border-radius-sm: 5px;
+            --border-radius-md: 10px;
+            --border-radius-lg: 15px;
+            --line-height-base: 1.6;
+            --box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* 修改消息容器樣式，使用 flex 布局 */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            width: 90%;
+            margin: 20px auto;
+            background-color: white;
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 5px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            flex-grow: 1;
+        }
+
+        .chat-body {
+            flex: 1;
+            padding: var(--spacing-lg);
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        /* 消息容器樣式優化 */
+        .message {
+            display: flex;
+            margin-bottom: var(--spacing-md);
+            animation: fadeIn 0.5s ease;
+            width: 100%;
+        }
+
+        .message-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius-md);
+            position: relative;
+            box-shadow: var(--box-shadow);
+        }
+
+        /* 消息頭部布局優化 */
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding-bottom: var(--spacing-xs);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .message-sender {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+        }
+
+        .message-time {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            margin-left: auto;
+        }
+
+        /* 消息內容統一樣式 */
+        .message-body {
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            font-size: 16px !important;
+            line-height: 1.6 !important;
+            color: #212529 !important;
+        }
+
+        /* 移除純文字的特殊樣式 */
+        .message-body > *:first-child:not(pre):not(code) {
+            background-color: transparent !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            font-size: 16px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+        }
+        
+        /* 確保程式碼區塊的樣式只應用於實際的程式碼 */
+        .message-body pre,
+        .message-body code {
+            background-color: #f6f8fa !important;
+            border-radius: 6px !important;
+            padding: 16px !important;
+            font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+            white-space: pre-wrap !important;
+        }
+        
+        /* 確保一般文字不會有程式碼樣式 */
+        .message-body > p:first-child {
+            background-color: transparent !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            color: #212529 !important;
+        }
+
+        /* 用戶消息特定樣式 */
+        .user-message .message-content {
+            background-color: var(--user-msg-color);
+            margin-left: 60px;
+            margin-right: 60px;
+        }
+
+        /* AI助手消息特定樣式 */
+        .assistant-message .message-content {
+            background-color: var(--ai-msg-color);
+            margin-left: 60px;
+            margin-right: 60px;
+        }
+
+        /* 系統消息特定樣式 */
+        .system-message .message-content {
+            background-color: var(--system-msg-color);
+            margin: var(--spacing-sm) 80px;
+            text-align: center;
         }
         
         body {
@@ -161,270 +494,6 @@
             opacity: 0.9;
             max-width: 800px;
             margin: 0 auto;
-        }
-        
-        /* 修改聊天容器样式，使用卡片式设计 */
-        .chat-container {
-            max-width: 1200px;
-            width: 90%;
-            margin: 20px auto;
-            background-color: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-        
-        /* 其他样式保持不变 */
-        .chat-body {
-            padding: 20px 30px;
-            flex-grow: 1;
-            max-height: calc(100vh - 300px);
-            overflow-y: auto;
-            overflow-x: hidden; /* 防止水平溢出 */
-        }
-        
-        /* 修改消息样式，使其更加现代化 */
-        .message {
-            margin-bottom: 20px;
-            animation: fadeIn 0.5s ease;
-            width: 100%; /* 確保消息寬度不超過容器 */
-            word-wrap: break-word; /* 確保長文本自動換行 */
-            overflow-wrap: break-word;
-        }
-        
-        /* 確保消息內容自適應 */
-        .message-body {
-            overflow-wrap: break-word !important;
-            word-wrap: break-word !important;
-            word-break: break-word !important;
-            max-width: 100% !important;
-            font-size: 16px !important; /* 統一字體大小 */
-            line-height: 1.6 !important; /* 改善行間距 */
-        }
-        
-        /* 更強硬的字體統一規則，確保在所有子模板中生效 */
-        .message-body *:not(pre):not(code),
-        .message-body p,
-        .message-body span,
-        .message-body div,
-        .message-body li,
-        .message-body a,
-        .message-body strong,
-        .message-body em,
-        .message-body b,
-        .message-body i,
-        .message-body td,
-        .message-body th,
-        .message-body h1,
-        .message-body h2,
-        .message-body h3,
-        .message-body h4,
-        .message-body h5,
-        .message-body h6 {
-            font-size: 16px !important;
-            line-height: 1.6 !important;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-        }
-        
-        /* 統一代碼塊字體 */
-        .message-body pre,
-        .message-body code {
-            font-size: 14px !important;
-            line-height: 1.5 !important;
-            font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
-            background-color: #f8f9fa !important;
-            padding: 2px 4px !important;
-            border-radius: 3px !important;
-            white-space: pre-wrap !important;
-        }
-        
-        /* 修正問題選項格式 */
-        .message-body ul, 
-        .message-body ol,
-        .message-body ul li, 
-        .message-body ol li {
-            padding-left: 25px !important;
-            margin-bottom: 8px !important;
-            width: 100% !important;
-            font-size: 16px !important;
-            line-height: 1.6 !important;
-            white-space: normal !important;
-            overflow-wrap: break-word !important;
-            word-wrap: break-word !important;
-            word-break: break-word !important;
-        }
-        
-        /* 強制所有文本元素使用統一字體大小 */
-        .message-body p, 
-        .message-body div, 
-        .message-body span, 
-        .message-body li, 
-        .message-body td, 
-        .message-body th, 
-        .message-body strong, 
-        .message-body em, 
-        .message-body a, 
-        .message-body h1, 
-        .message-body h2, 
-        .message-body h3, 
-        .message-body h4, 
-        .message-body h5, 
-        .message-body h6 {
-            font-size: 16px !important;
-            line-height: 1.6 !important;
-            white-space: normal !important;
-            overflow-wrap: break-word !important;
-            word-wrap: break-word !important;
-            word-break: break-word !important;
-        }
-        
-        /* 修正所有消息內各元素的樣式 */
-        .message-content * {
-            max-width: 100%;
-            box-sizing: border-box;
-            white-space: normal;
-            overflow-wrap: break-word;
-            word-wrap: break-word;
-            word-break: break-word;
-        }
-        
-        /* 確保代碼塊不會破壞佈局 */
-        .message-body pre, .message-body code {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            max-width: 100%;
-            overflow-x: auto;
-            font-size: 14px; /* 代碼塊字體大小統一 */
-        }
-        
-        /* 修正橫向捲軸問題 */
-        .message-body * {
-            max-width: 100%;
-            box-sizing: border-box;
-        }
-        
-        /* 確保長文本、表格和其他元素自動換行 */
-        .message-body div, .message-body table {
-            width: auto;
-            max-width: 100%;
-            overflow-wrap: break-word;
-            word-wrap: break-word;
-        }
-        
-        /* 確保表格不會超出容器 */
-        .message-body table {
-            display: block;
-            overflow-x: auto;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .message-content {
-            padding: 15px 20px;
-            border-radius: 15px;
-            position: relative;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        
-        /* 修正訊息標頭樣式 */
-        .message-header {
-            margin-bottom: 8px;
-            font-size: 14px; /* 統一字體大小 */
-        }
-        
-        .message-sender {
-            font-weight: 600;
-            margin-right: 8px;
-        }
-        
-        .message-time {
-            color: #6c757d;
-            font-size: 12px;
-        }
-        
-        /* 修改头像样式 */
-        .message-avatar {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            font-size: 16px;
-            color: #6c757d;
-        }
-        
-        /* 修改用户消息样式 */
-        .user-message .message-content {
-            background-color: #e7f5ff;
-            margin-left: 60px;
-            margin-right: 60px;
-            border-bottom-right-radius: 5px;
-        }
-        
-        /* 修改AI消息样式 */
-        .assistant-message .message-content {
-            background-color: #f0f7ff;
-            margin-right: 60px;
-            margin-left: 60px;
-            border-bottom-left-radius: 5px;
-        }
-        
-        /* 修改系统消息样式 */
-        .system-message .message-content {
-            background-color: #fff8e6;
-            margin: 10px 80px;
-            text-align: center;
-        }
-        
-        /* 添加主题选择卡片样式 */
-        .theme-cards {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin: 20px 0;
-        }
-        
-        .theme-card {
-            background-color: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.3s ease;
-            cursor: pointer;
-            width: 200px;
-        }
-        
-        .theme-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-        }
-        
-        .theme-card.active {
-            background-color: #e7f5ff;
-            border: 2px solid #4361ee;
-        }
-        
-        .theme-icon {
-            font-size: 2.5rem;
-            color: var(--primary-color);
-            margin-bottom: 15px;
-        }
-        
-        .theme-card h4 {
-            margin: 0 0 10px 0;
-            font-size: 1.1rem;
-        }
-        
-        .theme-card p {
-            margin: 0;
-            font-size: 0.85rem;
-            color: #6c757d;
         }
         
         /* 修改输入区域样式 */
@@ -749,6 +818,203 @@
             margin-top: 0 !important;
             margin-bottom: 8px !important;
         }
+
+        /* 修改AI消息样式 */
+        .assistant-message .message-content {
+            background-color: #f0f7ff;
+            margin-right: 60px;
+            margin-left: 60px;
+            border-bottom-left-radius: 5px;
+        }
+        
+        /* 增加AI助手消息內容與標題的間距 */
+        .assistant-message .message-body {
+            padding-top: 10px !important;
+        }
+
+        /* 分隔線統一樣式，確保在動態渲染後也能保持 */
+        .message-header-separator {
+            height: 10px !important; 
+            border-bottom: 1px solid rgba(0,0,0,0.1) !important; 
+            margin-bottom: 10px !important;
+        }
+
+        /* 主題卡片樣式 */
+        .theme-cards {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+            margin: var(--spacing-lg) 0;
+        }
+
+        .theme-card {
+            background-color: white;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--box-shadow);
+            padding: var(--spacing-lg);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            width: 200px;
+            border: 2px solid transparent;
+        }
+
+        .theme-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .theme-card.active {
+            background-color: var(--user-msg-color);
+            border-color: var(--primary-color);
+        }
+
+        .theme-icon {
+            font-size: var(--font-size-xl);
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .theme-card h4 {
+            margin: 0 0 var(--spacing-sm) 0;
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+        }
+
+        .theme-card p {
+            margin: 0;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .theme-cards {
+                flex-direction: column;
+                align-items: center;
+                gap: var(--spacing-sm);
+            }
+            
+            .theme-card {
+                width: 90%;
+                max-width: 300px;
+            }
+        }
+
+        /* 添加樣式確保換行正確顯示 */
+        .message-body {
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+        }
+        
+        .message-body p {
+            margin-bottom: 1em !important;
+            white-space: pre-wrap !important;
+        }
+        
+        .message-body br {
+            display: block !important;
+            content: "" !important;
+            margin-top: 1em !important;
+        }
+
+        /* 專門處理 AI 助手消息的第一段文字 */
+        .assistant-message .message-body > *:first-child,
+        .assistant-message .message-body > p:first-child,
+        .assistant-message .message-body > div:first-child,
+        .assistant-message .message-body > span:first-child,
+        .assistant-message .message-body > pre:first-child {
+            background-color: transparent !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            font-size: 16px !important;
+            color: #212529 !important;
+            padding: 0 !important;
+            margin: 0 0 1em 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+        }
+
+        /* 確保程式碼區塊的樣式只應用於實際的程式碼 */
+        .assistant-message .message-body pre code,
+        .assistant-message .message-body code {
+            background-color: #f6f8fa !important;
+            border-radius: 6px !important;
+            padding: 16px !important;
+            font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+            white-space: pre-wrap !important;
+            display: block !important;
+            margin: 1em 0 !important;
+        }
+
+        /* 移除所有消息內容的預設背景色 */
+        .message-body > *:not(pre):not(code),
+        .message-body p:not(pre):not(code),
+        .message-body div:not(pre):not(code),
+        .message-body span:not(pre):not(code) {
+            background-color: transparent !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            font-size: 16px !important;
+            color: #212529 !important;
+        }
+
+        /* 確保段落間距正確 */
+        .message-body p {
+            margin: 0 0 1em 0 !important;
+        }
+
+        /* 最後一個段落不需要底部間距 */
+        .message-body p:last-child {
+            margin-bottom: 0 !important;
+        }
+
+        /* 專門處理 AI 助手消息的樣式 */
+        .assistant-message .message-body > p {
+            background-color: transparent !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            font-size: 16px !important;
+            color: #212529 !important;
+            padding: 0 !important;
+            margin: 0 0 1em 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+        }
+
+        /* 確保程式碼區塊只在真正的程式碼中使用 */
+        .assistant-message .message-body pre,
+        .assistant-message .message-body code {
+            background-color: #f6f8fa !important;
+            border-radius: 6px !important;
+            padding: 16px !important;
+            font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+            margin: 1em 0 !important;
+            white-space: pre-wrap !important;
+        }
+
+        /* 移除所有一般文字的程式碼樣式 */
+        .assistant-message .message-body p:not(pre):not(code) {
+            background: none !important;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            padding: 0 !important;
+            margin: 0 0 1em 0 !important;
+            border: none !important;
+            white-space: pre-wrap !important;
+        }
+
+        /* 最後一個段落不需要底部間距 */
+        .assistant-message .message-body p:last-child {
+            margin-bottom: 0 !important;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -801,6 +1067,7 @@
                                     <span class="message-sender">您</span>
                                     <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') if message.timestamp else '' }}</span>
                                 </div>
+                                <div class="message-header-separator"></div>
                                 <div class="message-body">
                                     {{ message.content|safe }}
                                 </div>
@@ -816,6 +1083,7 @@
                                     <span class="message-sender">AI助手</span>
                                     <span class="message-time">{{ message.timestamp.strftime('%H:%M:%S') if message.timestamp else '' }}</span>
                                 </div>
+                                <div class="message-header-separator"></div>
                                 <div class="message-body">
                                     {{ message.content|safe }}
                                 </div>
@@ -842,6 +1110,7 @@
                             <span class="message-sender">AI助手</span>
                             <span class="message-time" id="loading-time"></span>
                         </div>
+                        <div class="message-header-separator"></div>
                         <div class="message-body">
                             <i class="fas fa-spinner fa-spin me-2"></i>等待模型思考回應中<span class="loading-dots"></span>
                         </div>
@@ -850,7 +1119,7 @@
             </div>
             
             <div class="chat-input-container">
-                <form method="POST" id="chat-form" class="chat-input-container">
+                <form method="POST" id="chat-form" class="chat-form">
                     <input type="hidden" name="instruction" id="instruction" value="{{ selected_tool or default_instruction }}">
                     <input type="hidden" name="tool_type" id="tool_type" value="{{ selected_tool or default_instruction }}">
                     <div class="input-group">
@@ -875,464 +1144,37 @@
     <script type="text/javascript" id="MathJax-script" async
         src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
+    {% block extra_js %}{% endblock %}
     <script>
-        window.MathJax = {
-            tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']]
-            },
-            svg: {
-                fontCache: 'global'
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('chat-form');
+            const loadingMessage = document.getElementById('loading-message');
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    if (userInput && userInput.value.trim()) {
+                        loadingMessage.style.display = 'block';
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+                });
             }
-        };
+            
+            // 確保所有消息都有分隔線
+            document.querySelectorAll('.message-content').forEach(function(messageContent) {
+                const header = messageContent.querySelector('.message-header');
+                const body = messageContent.querySelector('.message-body');
+                
+                if (header && body && !messageContent.querySelector('.message-header-separator')) {
+                    const separator = document.createElement('div');
+                    separator.className = 'message-header-separator';
+                    header.insertAdjacentElement('afterend', separator);
+                }
+            });
+        });
     </script>
     <script>
-        // 配置 marked.js
-        marked.setOptions({
-            highlight: function(code, lang) {
-                if (lang && hljs.getLanguage(lang)) {
-                    return hljs.highlight(code, { language: lang }).value;
-                }
-                return hljs.highlightAuto(code).value;
-            },
-            breaks: true,
-            gfm: true
-        });
-
-        // 用於追蹤用戶是否正在查看歷史消息
-        let userIsScrollingUp = false;
-        let lastScrollTop = 0;
-        let renderTimeout = null;
-
-        // 增強版的統一所有消息字體大小的函數
-        function uniformAllFontSizes() {
-            try {
-                // 查找所有消息容器
-                document.querySelectorAll('.message-body').forEach(messageBody => {
-                    // 首先移除內聯樣式可能性
-                    messageBody.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; max-width: 100% !important; word-break: break-word !important; overflow-wrap: break-word !important;');
-                    
-                    // 處理第一個直接文本節點（可能沒有被包裝在元素中）
-                    let firstNodeProcessed = false;
-                    const childNodes = Array.from(messageBody.childNodes);
-                    for (let i = 0; i < childNodes.length; i++) {
-                        const node = childNodes[i];
-                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
-                            const wrapper = document.createElement('span');
-                            wrapper.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif !important; display: block !important; margin-bottom: 8px !important;');
-                            wrapper.textContent = node.textContent;
-                            node.replaceWith(wrapper);
-                            firstNodeProcessed = true;
-                            break;
-                        } else if (node.nodeType === Node.ELEMENT_NODE && !firstNodeProcessed) {
-                            // 第一個元素節點
-                            node.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif !important; margin-top: 0 !important; margin-bottom: 8px !important; max-width: 100% !important; overflow-wrap: break-word !important; word-wrap: break-word !important; word-break: break-word !important; white-space: normal !important; display: block !important;');
-                            firstNodeProcessed = true;
-                            break;
-                        }
-                    }
-                    
-                    // 特別處理第一段文字 - 通過各種選擇器
-                    const firstElements = [
-                        messageBody.querySelector('p:first-child'), 
-                        messageBody.querySelector('div:first-child'),
-                        messageBody.querySelector('span:first-child'),
-                        messageBody.firstElementChild
-                    ];
-                    
-                    // 處理找到的第一個元素（如果有）
-                    for (const element of firstElements) {
-                        if (element) {
-                            element.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif !important; margin-top: 0 !important; margin-bottom: 8px !important; max-width: 100% !important; overflow-wrap: break-word !important; word-wrap: break-word !important; word-break: break-word !important; white-space: normal !important; display: block !important;');
-                            break; // 處理找到的第一個元素後停止
-                        }
-                    }
-                    
-                    // 處理所有剩餘的直接文本節點
-                    const allChildNodes = Array.from(messageBody.childNodes);
-                    for (let i = 0; i < allChildNodes.length; i++) {
-                        const node = allChildNodes[i];
-                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
-                            const wrapper = document.createElement('span');
-                            wrapper.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif !important; display: block !important;');
-                            wrapper.textContent = node.textContent;
-                            node.replaceWith(wrapper);
-                        }
-                    }
-                    
-                    // 強制應用於所有可能的元素
-                    const allElements = messageBody.querySelectorAll('*');
-                    
-                    allElements.forEach(el => {
-                        // 判斷是否為代碼元素
-                        const isCodeElement = el.tagName === 'PRE' || el.tagName === 'CODE' || 
-                                            el.parentElement?.tagName === 'PRE' || 
-                                            el.classList.contains('hljs');
-                        
-                        if (isCodeElement) {
-                            // 代碼元素特殊處理
-                            el.setAttribute('style', 'font-size: 14px !important; line-height: 1.5 !important; font-family: Consolas, Monaco, monospace !important; white-space: pre-wrap !important; max-width: 100% !important;');
-                        } else {
-                            // 一般文本元素
-                            const originalDisplay = window.getComputedStyle(el).display;
-                            let displayStyle = originalDisplay === 'inline' ? 'inline' : 'block';
-                            
-                            // 特別處理選項文本
-                            if (el.textContent && (
-                                el.textContent.includes('(A)') || 
-                                el.textContent.includes('(B)') || 
-                                el.textContent.includes('(C)') || 
-                                el.textContent.includes('(D)') || 
-                                el.textContent.includes('(E)')
-                            )) {
-                                displayStyle = 'block';
-                            }
-                            
-                            // 設置完整的內聯樣式，最大程度統一所有元素
-                            el.setAttribute('style', `font-size: 16px !important; line-height: 1.6 !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; max-width: 100% !important; overflow-wrap: break-word !important; word-wrap: break-word !important; word-break: break-word !important; white-space: normal !important; display: ${displayStyle} !important;`);
-                        }
-                    });
-                    
-                    // 特別處理表格
-                    messageBody.querySelectorAll('table').forEach(table => {
-                        table.setAttribute('style', 'width: 100% !important; max-width: 100% !important; overflow-x: auto !important; display: block !important;');
-                        
-                        // 處理表格內的文本
-                        table.querySelectorAll('th, td').forEach(cell => {
-                            cell.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; padding: 8px !important; border: 1px solid #e0e0e0 !important;');
-                        });
-                    });
-                });
-            } catch (e) {
-                console.error('統一字體大小時發生錯誤:', e);
-            }
-        }
-        
-        // 監視DOM變化，當有新元素添加時自動應用統一字體
-        function setupFontObserver() {
-            const fontObserver = new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
-                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                        // 發現新添加的節點，立即應用字體統一
-                        uniformAllFontSizes();
-                    }
-                });
-            });
-            
-            // 監視整個聊天容器
-            const chatContainer = document.querySelector('.chat-container');
-            if (chatContainer) {
-                fontObserver.observe(chatContainer, {
-                    childList: true,
-                    subtree: true
-                });
-            }
-        }
-        
-        // 合併的 MutationObserver - 監控新消息和滾動
-        const combinedObserver = new MutationObserver(function(mutations) {
-            let hasNewMessage = false;
-            mutations.forEach(mutation => {
-                mutation.addedNodes.forEach(node => {
-                    if (node.classList && 
-                        (node.classList.contains('user-message') || 
-                         node.classList.contains('assistant-message'))) {
-                        hasNewMessage = true;
-                    }
-                });
-            });
-
-            // 觸發優化的渲染函數
-            optimizedRender();
-            
-            // 強制應用統一字體大小並設置延遲檢查
-            afterMessageRender();
-
-            // 只有在添加新消息且用戶不是在查看歷史消息時才滾動
-            if (hasNewMessage && !userIsScrollingUp) {
-                const chatMessages = document.getElementById('chat-messages');
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-        });
-        
-        // 特別處理消息渲染後的字體統一
-        function afterMessageRender() {
-            try {
-                // 立即應用一次字體統一
-                uniformAllFontSizes();
-                
-                // 特別處理文本節點，確保所有文本都有一致的字體
-                document.querySelectorAll('.message-body').forEach(messageBody => {
-                    // 1. 首先確保 message-body 自身有正確樣式
-                    messageBody.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif !important; max-width: 100% !important; overflow-wrap: break-word !important; word-wrap: break-word !important; word-break: break-word !important; white-space: normal !important;');
-                    
-                    // 2. 特別處理第一個子元素 (無論類型)
-                    const firstChild = messageBody.firstChild;
-                    if (firstChild) {
-                        if (firstChild.nodeType === Node.TEXT_NODE && firstChild.textContent.trim() !== '') {
-                            // 是文本節點且有內容
-                            const wrapper = document.createElement('span');
-                            wrapper.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif !important; display: block !important;');
-                            // 替換文本節點為包裝後的元素
-                            firstChild.replaceWith(wrapper);
-                            wrapper.textContent = firstChild.textContent;
-                        } else if (firstChild.nodeType === Node.ELEMENT_NODE) {
-                            // 是元素節點
-                            firstChild.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif !important; margin-top: 0 !important; margin-bottom: 8px !important; max-width: 100% !important; overflow-wrap: break-word !important; word-wrap: break-word !important; word-break: break-word !important; white-space: normal !important; display: block !important;');
-                        }
-                    }
-                    
-                    // 3. 處理所有直接文本節點
-                    let hasChanges = false;
-                    Array.from(messageBody.childNodes).forEach(node => {
-                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
-                            hasChanges = true;
-                            // 創建新的包裝元素
-                            const wrapper = document.createElement('span');
-                            wrapper.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif !important; display: block !important;');
-                            wrapper.textContent = node.textContent;
-                            // 替換原始的文本節點
-                            node.replaceWith(wrapper);
-                        }
-                    });
-                    
-                    // 4. 處理所有現有元素
-                    if (hasChanges) {
-                        uniformAllFontSizes();
-                    }
-                    
-                    // 5. 最後一次強制應用於所有元素
-                    const allElements = messageBody.querySelectorAll('*');
-                    allElements.forEach(el => {
-                        if (el.tagName === 'PRE' || el.tagName === 'CODE' || 
-                            el.parentElement?.tagName === 'PRE' || 
-                            el.classList.contains('hljs')) {
-                            // 代碼元素特殊處理
-                            el.setAttribute('style', 'font-size: 14px !important; line-height: 1.5 !important; font-family: Consolas, Monaco, monospace !important; white-space: pre-wrap !important; max-width: 100% !important;');
-                        } else {
-                            // 正常文本元素
-                            el.style.fontSize = '16px';
-                            el.style.lineHeight = '1.6';
-                            el.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-                            el.style.maxWidth = '100%';
-                            el.style.overflowWrap = 'break-word';
-                            el.style.wordWrap = 'break-word';
-                            el.style.wordBreak = 'break-word';
-                            el.style.whiteSpace = 'normal';
-                        }
-                    });
-                });
-            } catch (error) {
-                console.error('處理消息字體時發生錯誤:', error);
-            }
-            
-            // 再次延遲檢查 (等待可能的異步渲染完成)
-            setTimeout(uniformAllFontSizes, 200);
-            setTimeout(uniformAllFontSizes, 500);
-            setTimeout(uniformAllFontSizes, 1000);
-        }
-        
-        // 優化的渲染函數
-        function optimizedRender() {
-            // 清除之前的計時器
-            if (renderTimeout) {
-                clearTimeout(renderTimeout);
-            }
-
-            // 設置新的計時器，延遲執行渲染
-            renderTimeout = setTimeout(() => {
-                const chatMessages = document.getElementById('chat-messages');
-                
-                // 渲染 Markdown
-                document.querySelectorAll('.message-content').forEach(function(element) {
-                    if (!element.dataset.rendered) {
-                        const content = element.textContent;
-                        if (content) {
-                            element.innerHTML = marked.parse(content);
-                            element.dataset.rendered = 'true';
-                            
-                            // Markdown 渲染後立即處理第一段文字
-                            const messageBody = element.querySelector('.message-body');
-                            if (messageBody) {
-                                const firstParagraph = messageBody.querySelector('p:first-child, div:first-child, span:first-child');
-                                if (firstParagraph) {
-                                    firstParagraph.setAttribute('style', 'font-size: 16px !important; line-height: 1.6 !important; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif !important; max-width: 100% !important; overflow-wrap: break-word !important; word-wrap: break-word !important; word-break: break-word !important; white-space: normal !important; display: block !important;');
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // 特別處理多選項格式
-                document.querySelectorAll('.user-message .message-body').forEach(messageBody => {
-                    const content = messageBody.innerHTML;
-                    
-                    // 檢查是否包含選項 (A), (B) 等
-                    if (/\([A-E]\)/.test(content)) {
-                        // 修正選項的顯示，確保每個選項獨立一行
-                        let modifiedContent = content.replace(/([^a-zA-Z0-9])\(([A-E])\)([^a-zA-Z0-9])/g, '$1<br><strong>($2)</strong>$3');
-                        
-                        // 更新內容
-                        if (modifiedContent !== content) {
-                            messageBody.innerHTML = modifiedContent;
-                        }
-                    }
-                });
-
-                // 渲染 MathJax
-                if (window.MathJax) {
-                    MathJax.typesetPromise([chatMessages]).then(() => {
-                        // MathJax 渲染完成後立即應用字體統一
-                        afterMessageRender();
-                    });
-                } else {
-                    // 如果沒有 MathJax，仍然應用字體統一
-                    afterMessageRender();
-                }
-
-                // 調整佈局
-                adjustLayout(!userIsScrollingUp);
-                
-                // 應用統一字體大小
-                uniformAllFontSizes();
-            }, 100);
-        }
-
-        // 頁面加載完成後的初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            const chatMessages = document.getElementById('chat-messages');
-            
-            // 初始渲染
-            optimizedRender();
-            
-            // 立即統一所有消息字體大小
-            uniformAllFontSizes();
-            
-            // 開始觀察變化
-            if (chatMessages) {
-                setupFontObserver();
-                
-                // 設置消息變化監視器
-                combinedObserver.observe(chatMessages, { 
-                    childList: true, 
-                    subtree: true 
-                });
-                
-                // 監聽滾動事件
-                chatMessages.addEventListener('scroll', function() {
-                    if (chatMessages.scrollTop < lastScrollTop) {
-                        userIsScrollingUp = true;
-                    } else if (chatMessages.scrollTop >= chatMessages.scrollHeight - chatMessages.clientHeight - 10) {
-                        userIsScrollingUp = false;
-                    }
-                    lastScrollTop = chatMessages.scrollTop;
-                });
-            }
-
-            // 更新 API 使用統計
-            updateApiStats();
-
-            // 從模板變量獲取當前選擇的工具
-            const currentTool = '{{ selected_tool or default_instruction }}';
-            
-            // 如果有當前選擇的工具，使用它
-            if (currentTool) {
-                selectMode(currentTool);
-            } else {
-                // 否則嘗試從 localStorage 恢復
-                const savedMode = localStorage.getItem('selectedMode');
-                if (savedMode) {
-                    selectMode(savedMode);
-                }
-            }
-            
-            // 每半秒重新統一一次字體大小，確保即使子模板有JS修改也能維持統一
-            setInterval(uniformAllFontSizes, 500);
-            
-            // 額外添加一個重覆執行機制，確保在頁面加載後的一段時間內頻繁檢查和修正字體大小
-            let uniformCounter = 0;
-            const initialUniformInterval = setInterval(() => {
-                uniformAllFontSizes();
-                uniformCounter++;
-                if (uniformCounter >= 20) {  // 10秒後停止頻繁檢查
-                    clearInterval(initialUniformInterval);
-                }
-            }, 500);
-        });
-
-        // 調整佈局函數
-        function adjustLayout(scrollToBottom = false) {
-            const chatMessages = document.getElementById('chat-messages');
-            if (chatMessages) {
-                // 重新計算聊天容器高度
-                chatMessages.style.maxHeight = `calc(100vh - ${300 + (window.innerWidth <= 768 ? 50 : 0)}px)`;
-                
-                // 強制處理每一條消息
-                document.querySelectorAll('.message-body').forEach(messageBody => {
-                    // 特別處理用戶輸入的英文問題文本
-                    if (messageBody.closest('.user-message')) {
-                        // 處理用戶輸入的文本，確保換行
-                        const text = messageBody.innerHTML;
-                        
-                        // 檢查是否包含英文問題和選項的模式
-                        const hasOptions = /\([A-E]\)/.test(text);
-                        
-                        if (hasOptions) {
-                            // 使用更嚴格的處理
-                            messageBody.querySelectorAll('*').forEach(el => {
-                                el.style.fontSize = '16px';
-                                el.style.lineHeight = '1.6';
-                                el.style.whiteSpace = 'normal';
-                                el.style.wordBreak = 'break-word';
-                                el.style.overflowWrap = 'break-word';
-                                el.style.maxWidth = '100%';
-                            });
-                        }
-                    }
-                    
-                    // 處理所有元素
-                    messageBody.querySelectorAll('*').forEach(el => {
-                        // 根據元素類型設置字體大小
-                        if (el.tagName === 'PRE' || el.tagName === 'CODE') {
-                            el.style.fontSize = '14px';
-                            el.style.whiteSpace = 'pre-wrap';
-                        } else {
-                            el.style.fontSize = '16px';
-                            el.style.lineHeight = '1.6';
-                            el.style.whiteSpace = 'normal';
-                            el.style.wordBreak = 'break-word';
-                            el.style.overflowWrap = 'break-word';
-                        }
-                    });
-                    
-                    // 找出所有包含字母選項的段落，特別處理
-                    const paragraphs = messageBody.querySelectorAll('p');
-                    paragraphs.forEach(p => {
-                        if (/\([A-E]\)/.test(p.textContent)) {
-                            p.style.fontSize = '16px';
-                            p.style.lineHeight = '1.6';
-                            p.style.whiteSpace = 'normal';
-                            p.style.wordBreak = 'break-word';
-                            p.style.overflowWrap = 'break-word';
-                            p.style.width = '100%';
-                            p.style.maxWidth = '100%';
-                            p.style.display = 'block';
-                        }
-                    });
-                });
-                
-                // 只有在需要時才滾動到底部，且用戶不是在查看歷史消息
-                if (scrollToBottom && !userIsScrollingUp) {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-            }
-        }
-        
-        // 清除輸入框
-        function clearInput() {
-            document.getElementById('user-input').value = '';
-        }
-        
         // 選擇解題模式
         function selectMode(mode) {
             // 移除所有卡片的 active 類
@@ -1341,7 +1183,7 @@
             });
             
             // 為選中的卡片添加 active 類
-            const selectedCard = document.querySelector(`.theme-card[onclick="selectMode('${mode}')"]`);
+            const selectedCard = document.querySelector(`.theme-card[onclick*="${mode}"]`);
             if (selectedCard) {
                 selectedCard.classList.add('active');
             }
@@ -1353,7 +1195,7 @@
             // 保存選擇到 localStorage
             localStorage.setItem('selectedMode', mode);
             
-            // 發送一個空的 POST 請求來更新 system prompt，但不重新載入頁面
+            // 發送一個空的 POST 請求來更新 system prompt
             fetch(window.location.href, {
                 method: 'POST',
                 headers: {
@@ -1366,14 +1208,14 @@
                 })
             }).then(response => {
                 if (response.ok) {
-                    // 不重新載入頁面，而是顯示一個提示
+                    // 顯示模式切換提示
                     const chatMessages = document.getElementById('chat-messages');
                     const systemMessage = document.createElement('div');
                     systemMessage.className = 'message system-message';
                     systemMessage.innerHTML = `
                         <div class="message-content">
                             <div class="message-body">
-                                已切換到 ${selectedCard.querySelector('h4').textContent} 模式
+                                <i class="fas fa-info-circle me-2"></i>已切換到 ${selectedCard.querySelector('h4').textContent} 模式
                             </div>
                         </div>
                     `;
@@ -1382,177 +1224,6 @@
                 }
             });
         }
-        
-        // 在表單提交前處理
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.querySelector('.chat-form');
-            
-            form.addEventListener('submit', function(event) {
-                // 表單提交時重置滾動狀態，因為用戶希望看到新消息
-                userIsScrollingUp = false;
-                
-                // 顯示加載消息
-                const loadingMessage = document.getElementById('loading-message');
-                if (loadingMessage) {
-                    // 設置當前時間
-                    const now = new Date();
-                    document.getElementById('loading-time').textContent = now.getHours().toString().padStart(2, '0') + ':' + 
-                                                                     now.getMinutes().toString().padStart(2, '0') + ':' + 
-                                                                     now.getSeconds().toString().padStart(2, '0');
-                    
-                    loadingMessage.style.display = 'block';
-                    
-                    // 滾動到底部
-                    const chatMessages = document.getElementById('chat-messages');
-                    setTimeout(() => {
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
-                        lastScrollTop = chatMessages.scrollTop;
-                    }, 100);
-                }
-                
-                // 提交後更新 API 統計
-                setTimeout(updateApiStats, 2000);
-            });
-        });
-        
-        // 添加加載動畫
-        const loadingDots = document.querySelector('.loading-dots');
-        let dotCount = 0;
-        
-        setInterval(() => {
-            dotCount = (dotCount + 1) % 4;
-            loadingDots.textContent = '.'.repeat(dotCount);
-        }, 500);
-        
-        // 更新 API 使用統計
-        // 確保這個函數在所有頁面都能正確執行
-        function updateApiStats() {
-            fetch('/api/user/stats')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // 更新 API 餘額顯示
-                        document.getElementById('api-balance').textContent = `¥${data.balance.toFixed(2)}`;
-                        
-                        // 更新重置天數
-                        document.getElementById('days-until-reset').textContent = data.days_until_reset;
-                        
-                        // 根據餘額設置顏色
-                        const balanceElement = document.getElementById('api-balance');
-                        if (data.balance <= 1.0) {
-                            balanceElement.classList.add('api-balance-warning');
-                            balanceElement.classList.remove('api-balance-ok');
-                        } else {
-                            balanceElement.classList.add('api-balance-ok');
-                            balanceElement.classList.remove('api-balance-warning');
-                        }
-                    }
-                })
-                .catch(error => console.error('獲取API統計失敗:', error));
-        }
-        
-        // 確保頁面加載時和每次提交表單後都更新統計數據
-        document.addEventListener('DOMContentLoaded', updateApiStats);
-        
-        // 監聽表單提交事件
-        const chatForm = document.getElementById('chat-form');
-        if (chatForm) {
-            chatForm.addEventListener('submit', function() {
-                // 表單提交後延遲更新統計數據，等待後端處理完成
-                setTimeout(updateApiStats, 2000);
-            });
-        }
     </script>
-    
-    <!-- 添加立即執行的強制樣式 -->
-    <script>
-        // 頁面加載完成前就立即執行
-        (function() {
-            // 建立一個強制樣式設置
-            function forceUniformFontSize() {
-                // 創建樣式標籤
-                const forcedStyle = document.createElement('style');
-                forcedStyle.id = 'forced-font-style';
-                forcedStyle.innerHTML = `
-                    /* 強制所有文本元素使用統一字體大小 */
-                    .message-body,
-                    .message-body *:not(pre):not(code),
-                    .message-body p, 
-                    .message-body div, 
-                    .message-body span, 
-                    .message-body li, 
-                    .message-body td, 
-                    .message-body th, 
-                    .message-body strong, 
-                    .message-body em, 
-                    .message-body a, 
-                    .message-body h1, 
-                    .message-body h2, 
-                    .message-body h3, 
-                    .message-body h4, 
-                    .message-body h5, 
-                    .message-body h6 {
-                        font-size: 16px !important;
-                        line-height: 1.6 !important;
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-                    }
-                    
-                    /* 特別處理第一段文字 */
-                    .message-body > p:first-child,
-                    .message-body > div:first-child,
-                    .message-body > span:first-child,
-                    .message-body > *:first-child {
-                        font-size: 16px !important;
-                        line-height: 1.6 !important;
-                        display: block !important;
-                    }
-                    
-                    /* 代碼元素 */
-                    .message-body pre,
-                    .message-body code {
-                        font-size: 14px !important;
-                        line-height: 1.5 !important;
-                    }
-                `;
-                document.head.appendChild(forcedStyle);
-                
-                // 立即處理現有元素
-                function processExistingMessage() {
-                    document.querySelectorAll('.message-body').forEach(body => {
-                        Array.from(body.childNodes).forEach(node => {
-                            if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
-                                const span = document.createElement('span');
-                                span.style.cssText = 'font-size: 16px !important; line-height: 1.6 !important; display: block !important;';
-                                span.textContent = node.textContent;
-                                node.replaceWith(span);
-                            }
-                        });
-                    });
-                }
-                
-                // 等待DOM加載完成再執行
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', processExistingMessage);
-                } else {
-                    processExistingMessage();
-                }
-                
-                // 設置MutationObserver監控DOM變更
-                const observer = new MutationObserver(mutations => {
-                    processExistingMessage();
-                });
-                
-                // 開始監視整個文檔
-                observer.observe(document.documentElement, {
-                    childList: true,
-                    subtree: true
-                });
-            }
-            
-            // 執行強制樣式設置
-            forceUniformFontSize();
-        })();
-    </script>
-    {% block extra_js %}{% endblock %}
 </body>
 </html>
