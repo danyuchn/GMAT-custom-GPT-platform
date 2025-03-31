@@ -74,7 +74,7 @@ export class MemStorage implements IStorage {
     const adminUser: User = {
       id: adminId,
       username: "admin",
-      password: "$2a$10$Qm/sFDHzFp6Qu9qOcCLz5.6OuFYUnMZJRO4vGI00CmIlSEAAGrSRO", // "password"
+      password: "$2b$10$6hX3W8164gN2ubwaFuLLmemSGEBghGUPzsyIAUrl0FlD1Vll4Up2e", // "password"
       email: "admin@gmat.ai",
       isAdmin: true,
       createdAt: adminNow
@@ -87,7 +87,7 @@ export class MemStorage implements IStorage {
     const regularUser: User = {
       id: userId,
       username: "user",
-      password: "$2a$10$Qm/sFDHzFp6Qu9qOcCLz5.6OuFYUnMZJRO4vGI00CmIlSEAAGrSRO", // "password"
+      password: "$2b$10$6hX3W8164gN2ubwaFuLLmemSGEBghGUPzsyIAUrl0FlD1Vll4Up2e", // "password"
       email: "user@gmat.ai",
       isAdmin: false,
       createdAt: userNow
