@@ -49,7 +49,11 @@ export default function Login() {
       // Using direct fetch instead of apiRequest to handle error response
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache"
+        },
         body: JSON.stringify({
           email: data.email,
           password: data.password,
@@ -60,21 +64,38 @@ export default function Login() {
       const responseData = await response.json();
       
       if (response.ok) {
-        // First set the user data in the context
-        login(responseData);
-        
+        // First show success message
         toast({
           title: "Login successful",
           description: "Welcome back to GMAT AI Assistant",
         });
         
-        // Then use setTimeout to ensure state updates before navigation
-        setTimeout(() => {
-          // Double-check that user is set before redirecting
-          if (responseData) {
-            window.location.href = "/"; // Use direct location change instead of navigate
+        // Set user data in context
+        login(responseData);
+        
+        // 確保在重定向前先驗證會話
+        try {
+          const authCheckResponse = await fetch("/api/auth/me", {
+            credentials: "include",
+            headers: {
+              "Cache-Control": "no-cache",
+              "Pragma": "no-cache"
+            }
+          });
+          
+          if (authCheckResponse.ok) {
+            // Session is confirmed, now redirect
+            window.location.href = "/";
+          } else {
+            console.error("Session verification failed after login");
+            // Still try to redirect even if verification fails
+            window.location.href = "/";
           }
-        }, 100);
+        } catch (checkError) {
+          console.error("Error checking auth status after login:", checkError);
+          // Still try to redirect even if verification fails
+          window.location.href = "/";
+        }
       } else {
         // Handle error from server
         toast({
