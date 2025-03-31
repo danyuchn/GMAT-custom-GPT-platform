@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 import traceback
+from flask_migrate import Migrate  # 添加 Flask-Migrate 導入
 
 # 必須先加載環境變量
 load_dotenv()
@@ -21,11 +22,15 @@ print(f"API key loaded successfully: {OPENAI_API_KEY[:10]}...")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'users.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 初始化資料庫和登入管理器
 db = SQLAlchemy(app)
+
+# 初始化 Flask-Migrate
+migrate = Migrate(app, db)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -63,6 +68,7 @@ class Message(db.Model):
     prompt_tokens = db.Column(db.Integer, default=0)
     completion_tokens = db.Column(db.Integer, default=0)
     cost = db.Column(db.Float, default=0.0)
+    response_id = db.Column(db.String(100), nullable=True)
 
 # 計算成本函數
 def calculate_cost(prompt_tokens, completion_tokens, cached_input_tokens=0):
@@ -377,25 +383,28 @@ def handle_chat(category, template_name):
     current_balance = token_manager.get_balance(current_user.id)
     
     if request.method == "POST":
-        user_input = request.form.get("user_input")
-        instruction = request.form.get("instruction", "simple_explain")
+        user_input = request.form.get('user_input', '').strip()
+        instruction = request.form.get('instruction', 'simple_explain')
         
-        # 如果是空的 user_input，只更新 system prompt
-        if user_input == "":
-            chat_id = session['active_chat_id']
-            Message.query.filter_by(chat_id=chat_id, role="system").delete()
+        if not user_input and instruction != session.get('current_instruction'):
+            # 更新系統提示
+            session['current_instruction'] = instruction
+            session['pending_system_message'] = init_conversation(instruction)[0]
             
-            system_message = init_conversation(instruction)[0]
-            new_system_message = Message(
-                chat_id=chat_id,
-                role=system_message["role"],
-                content=system_message["content"]
-            )
-            db.session.add(new_system_message)
-            db.session.commit()
-            
-            messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
-            return render_template(template_name, messages=messages, api_balance=current_balance)
+            if 'active_chat_id' in session:
+                active_chat_id = session['active_chat_id']
+                
+                # 添加系統消息，告知用戶已切換模式
+                system_notification = Message(
+                    chat_id=active_chat_id,
+                    role="system",
+                    content=f"已切換到 {instruction} 模式"
+                )
+                db.session.add(system_notification)
+                db.session.commit()
+                
+                messages = Message.query.filter_by(chat_id=active_chat_id).order_by(Message.timestamp).all()
+                return render_template(template_name, messages=messages)
         
         if user_input:
             # 檢查用戶餘額是否足夠
@@ -439,14 +448,37 @@ def handle_chat(category, template_name):
             db.session.commit()
             
             messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+            
+            # 獲取前一條消息的 response_id
+            previous_response_id = None
+            last_ai_message = Message.query.filter_by(
+                chat_id=chat_id, 
+                role='assistant'
+            ).order_by(Message.timestamp.desc()).first()
+            
+            if last_ai_message and last_ai_message.response_id:
+                previous_response_id = last_ai_message.response_id
+            
+            # 準備對話歷史
             conversation_history = [{"role": msg.role, "content": msg.content} for msg in messages]
             
-            response = client.chat.completions.create(
-                model="o3-mini",
-                messages=conversation_history,
-                stream=False
-            )
+            # 創建 API 請求參數
+            request_params = {
+                "model": "o3-mini",
+                "messages": conversation_history,
+                "stream": False
+            }
+            
+            # 如果有上一次回應的 ID，添加到請求中
+            if previous_response_id:
+                request_params["response_id"] = previous_response_id
+            
+            # 發送 API 請求
+            response = client.chat.completions.create(**request_params)
             model_reply = response.choices[0].message.content
+            
+            # 獲取 response_id
+            response_id = getattr(response, 'id', None)
             
             # 獲取API回應後，扣除成本
             prompt_tokens = completion_tokens = 0
@@ -470,7 +502,8 @@ def handle_chat(category, template_name):
                 content=model_reply,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
-                cost=turn_cost
+                cost=turn_cost,
+                response_id=response_id  # 保存 response_id
             )
             db.session.add(ai_message)
             db.session.commit()
@@ -526,9 +559,20 @@ def quant_tool():
                 messages = []
             return render_template('quant_tool.html', messages=messages, api_balance=balance)
         
+        # 獲取前一條消息的 response_id
+        previous_response_id = None
+        if session.get('chat_id'):
+            last_ai_message = Message.query.filter_by(
+                chat_id=session.get('chat_id'), 
+                role='assistant'
+            ).order_by(Message.timestamp.desc()).first()
+            
+            if last_ai_message and last_ai_message.response_id:
+                previous_response_id = last_ai_message.response_id
+        
         # 使用工具 API 處理請求
         from tools_api import process_tool_request
-        result = process_tool_request(instruction, user_input)
+        result = process_tool_request(instruction, user_input, previous_response_id)
         
         # 創建新的消息
         timestamp = datetime.now()
@@ -544,17 +588,18 @@ def quant_tool():
         # AI 回應
         if result['status'] == 'success':
             ai_content = result['content']
+            response_id = result.get('response_id')  # 獲取 response_id
         else:
             ai_content = f"處理請求時發生錯誤: {result['message']}"
+            response_id = None
             
         # 估算 token 使用量和成本
-        # 這裡使用簡單估算，實際應該從 API 回應中獲取
-        prompt_tokens = len(user_input) // 4  # 粗略估計，4個字符約等於1個token
-        completion_tokens = len(ai_content) // 4
-        _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+        prompt_tokens = result.get('tokens', {}).get('input', len(user_input) // 4)
+        completion_tokens = result.get('tokens', {}).get('output', len(ai_content) // 4)
+        cost = result.get('cost', 0.0)
         
         # 扣除用戶餘額
-        new_balance = token_manager.deduct_balance(current_user.id, turn_cost)
+        new_balance = token_manager.deduct_balance(current_user.id, cost)
         
         # 如果餘額不足，提示用戶
         if new_balance <= 0:
@@ -567,7 +612,8 @@ def quant_tool():
             chat_id=session.get('chat_id'),
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
-            cost=turn_cost
+            cost=cost,
+            response_id=response_id  # 保存 response_id
         )
         
         # 保存消息
@@ -613,8 +659,7 @@ def quant_tool():
 def verbal_tool():
     if request.method == 'POST':
         user_input = request.form.get('user_input')
-        tool_type = request.form.get('tool_type', 'cr_classification')
-        previous_response_id = request.form.get('previous_response_id')
+        tool_type = request.form.get('tool_type')
         
         # 檢查用戶餘額是否足夠
         has_balance, balance = token_manager.check_balance(current_user.id)
@@ -627,6 +672,17 @@ def verbal_tool():
                 messages = []
             return render_template('verbal_tool.html', messages=messages, api_balance=balance, selected_tool=tool_type)
         
+        # 獲取前一條消息的 response_id
+        previous_response_id = None
+        if session.get('chat_id'):
+            last_ai_message = Message.query.filter_by(
+                chat_id=session.get('chat_id'), 
+                role='assistant'
+            ).order_by(Message.timestamp.desc()).first()
+            
+            if last_ai_message and last_ai_message.response_id:
+                previous_response_id = last_ai_message.response_id
+        
         # 使用工具 API 處理請求
         from tools_api import process_tool_request
         result = process_tool_request(tool_type, user_input, previous_response_id)
@@ -634,38 +690,29 @@ def verbal_tool():
         # 創建新的消息
         timestamp = datetime.now()
         
-        # 獲取或創建聊天ID
-        chat_id = session.get('chat_id')
-        if not chat_id:
-            new_chat = Chat(user_id=current_user.id, category="verbal_tool")
-            db.session.add(new_chat)
-            db.session.commit()
-            chat_id = new_chat.id
-            session['chat_id'] = chat_id
-        
         # 用戶消息
         user_message = Message(
             role='user',
             content=user_input,
             timestamp=timestamp,
-            chat_id=chat_id
+            chat_id=session.get('chat_id')
         )
         
         # AI 回應
         if result['status'] == 'success':
             ai_content = result['content']
-            response_id = result.get('response_id')
+            response_id = result.get('response_id')  # 獲取 response_id
         else:
             ai_content = f"處理請求時發生錯誤: {result['message']}"
             response_id = None
-            
-        # 估算 token 使用量和成本
-        prompt_tokens = result.get('tokens', {}).get('input', 0)
-        completion_tokens = result.get('tokens', {}).get('output', 0)
-        turn_cost = result.get('cost', 0)
+        
+        # 獲取實際 token 使用量和成本
+        prompt_tokens = result.get('tokens', {}).get('input', len(user_input) // 4)
+        completion_tokens = result.get('tokens', {}).get('output', len(ai_content) // 4)
+        cost = result.get('cost', 0.0)
         
         # 扣除用戶餘額
-        new_balance = token_manager.deduct_balance(current_user.id, turn_cost)
+        new_balance = token_manager.deduct_balance(current_user.id, cost)
         
         # 如果餘額不足，提示用戶
         if new_balance <= 0:
@@ -675,10 +722,11 @@ def verbal_tool():
             role='assistant',
             content=ai_content,
             timestamp=timestamp,
-            chat_id=chat_id,
+            chat_id=session.get('chat_id'),
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
-            cost=turn_cost
+            cost=cost,
+            response_id=response_id  # 保存 response_id
         )
         
         # 保存消息
@@ -687,7 +735,7 @@ def verbal_tool():
         db.session.commit()
         
         # 獲取更新後的消息列表
-        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+        messages = Message.query.filter_by(chat_id=session.get('chat_id')).order_by(Message.timestamp).all()
         
         # 獲取當前餘額和重置天數
         current_balance = token_manager.get_balance(current_user.id)
@@ -737,7 +785,7 @@ def verbal_tool():
 def core_tool():
     if request.method == 'POST':
         user_input = request.form.get('user_input')
-        instruction = request.form.get('instruction', 'time_management')
+        tool_type = request.form.get('tool_type')
         
         # 檢查用戶餘額是否足夠
         has_balance, balance = token_manager.check_balance(current_user.id)
@@ -750,43 +798,47 @@ def core_tool():
                 messages = []
             return render_template('core_tool.html', messages=messages, api_balance=balance)
         
+        # 獲取前一條消息的 response_id
+        previous_response_id = None
+        if session.get('chat_id'):
+            last_ai_message = Message.query.filter_by(
+                chat_id=session.get('chat_id'), 
+                role='assistant'
+            ).order_by(Message.timestamp.desc()).first()
+            
+            if last_ai_message and last_ai_message.response_id:
+                previous_response_id = last_ai_message.response_id
+        
         # 使用工具 API 處理請求
         from tools_api import process_tool_request
-        result = process_tool_request(instruction, user_input)
+        result = process_tool_request(tool_type, user_input, previous_response_id)
         
         # 創建新的消息
         timestamp = datetime.now()
-        
-        # 獲取或創建聊天ID
-        chat_id = session.get('chat_id')
-        if not chat_id:
-            new_chat = Chat(user_id=current_user.id, category="core_tool")
-            db.session.add(new_chat)
-            db.session.commit()
-            chat_id = new_chat.id
-            session['chat_id'] = chat_id
         
         # 用戶消息
         user_message = Message(
             role='user',
             content=user_input,
             timestamp=timestamp,
-            chat_id=chat_id
+            chat_id=session.get('chat_id')
         )
         
         # AI 回應
         if result['status'] == 'success':
             ai_content = result['content']
+            response_id = result.get('response_id')  # 獲取 response_id
         else:
             ai_content = f"處理請求時發生錯誤: {result['message']}"
+            response_id = None
             
-        # 估算 token 使用量和成本
-        prompt_tokens = len(user_input) // 4  # 粗略估計，4個字符約等於1個token
-        completion_tokens = len(ai_content) // 4
-        _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+        # 獲取實際 token 使用量和成本
+        prompt_tokens = result.get('tokens', {}).get('input', len(user_input) // 4)
+        completion_tokens = result.get('tokens', {}).get('output', len(ai_content) // 4)
+        cost = result.get('cost', 0.0)
         
         # 扣除用戶餘額
-        new_balance = token_manager.deduct_balance(current_user.id, turn_cost)
+        new_balance = token_manager.deduct_balance(current_user.id, cost)
         
         # 如果餘額不足，提示用戶
         if new_balance <= 0:
@@ -796,10 +848,11 @@ def core_tool():
             role='assistant',
             content=ai_content,
             timestamp=timestamp,
-            chat_id=chat_id,
+            chat_id=session.get('chat_id'),
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
-            cost=turn_cost
+            cost=cost,
+            response_id=response_id  # 保存 response_id
         )
         
         # 保存消息
@@ -808,7 +861,7 @@ def core_tool():
         db.session.commit()
         
         # 獲取更新後的消息列表
-        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
+        messages = Message.query.filter_by(chat_id=session.get('chat_id')).order_by(Message.timestamp).all()
         
         # 獲取當前餘額和重置天數
         current_balance = token_manager.get_balance(current_user.id)
