@@ -40,9 +40,8 @@ type ChatCompletionMessageParam =
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY,
-  timeout: 60000, // 60 seconds timeout
-  maxRetries: 2 // limit retries to 2 times
-  // Note: maxConcurrency不是有效的ClientOptions參數，已移除
+  timeout: 120000, // 120 seconds timeout
+  maxRetries: 3, // increase retries
 });
 
 // Generate welcome message based on system prompt
@@ -226,17 +225,30 @@ export async function chatWithAI(
         type: error.type
       });
       
-      // Handle rate limits
       if (error.status === 429) {
         return {
           content: "The service is currently busy. Please try again in a moment.",
           id: ""
         };
       }
+      
+      if (error.code === 'timeout') {
+        return {
+          content: "The response took too long. Please try a shorter question.",
+          id: ""
+        };
+      }
+    }
+
+    if (error instanceof Error && error.message.includes('timeout')) {
+      return {
+        content: "The request timed out. Please try again with a simpler question.",
+        id: ""
+      };
     }
 
     return {
-      content: "I apologize, but I encountered an error. Please try your question again.",
+      content: "The AI service is temporarily unavailable. Please try again in a moment.",
       id: ""
     };
   }
