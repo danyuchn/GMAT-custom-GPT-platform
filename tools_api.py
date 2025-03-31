@@ -46,26 +46,28 @@ def calculate_cost(input_tokens, cached_tokens, output_tokens, model="gpt-4o"):
         # 如果添加其他模型，可以在這裡擴展
         return 0.0
 
-def handle_math_classification(user_input):
+def handle_math_classification(user_input, previous_response_id=None):
     """
     處理數學分類工具的 API 請求
     
     Args:
         user_input (str): 用戶輸入的數學題目
+        previous_response_id (str, optional): 上一次回應的 ID
         
     Returns:
         dict: API 回應結果
     """
     try:
-        response = client.responses.create(
-            model="gpt-4o",
-            input=[
+        # 準備 API 請求
+        request_data = {
+            "model": "gpt-4o",
+            "input": [
                 {
                     "role": "system",
                     "content": [
                         {
                             "type": "input_text",
-                            "text": "GMAT的數學核心觀念有：\nValue, Order, Factors, Algebra, Equalities, Inequalities, Rates, Ratios, Percents, Statistics, Sets, Counting, Probability, Estimation, and Series\n這幾類。\n\n用戶將會給你一或多道數學題目，請分析用戶所提供的每一道題目在設計時，是希望測驗考生的上面哪一個數學核心觀念（請不要給出上面未列出的分類）。\n\nMust do Double check on each question: 每道題目請做兩次獨立的核心觀念判斷，並且檢查你的兩次判斷是否一致。如果不一致，請做第三次最終判斷。\n\n並且最後將每個核心觀念出現的題目數量統計成表格。\n\n"
+                            "text": "GMAT的數學核心觀念有：\nValue, Order, Factors, Algebra, Equalities, Inequalities, Rates, Ratios, Percents, Statistics, Sets, Counting, Probability, Estimation, and Series\n這幾類。\n\n用戶將會給你一或多道數學題目，請分析用戶所提供的每一道題目在設計時，是希望測驗考生的上面哪一個數學核心觀念（請不要給出上面未列出的分類）。\n\nMust do Double check on each question: 每道題目請做兩次獨立的核心觀念判斷，並且檢查你的兩次判斷是否一致。如果不一致，請做第三次最終判斷。\n\n並且最後將每個核心觀念出現的題目數量統計成表格。"
                         }
                     ]
                 },
@@ -79,25 +81,30 @@ def handle_math_classification(user_input):
                     ]
                 }
             ],
-            text={
+            "text": {
                 "format": {
                     "type": "text"
                 }
             },
-            reasoning={},
-            tools=[],
-            temperature=0.2,
-            max_output_tokens=2048,
-            top_p=1,
-            store=True
-        )
+            "reasoning": {},
+            "tools": [],
+            "temperature": 0.2,
+            "max_output_tokens": 2048,
+            "top_p": 1,
+            "store": True
+        }
+        
+        # 如果有上一次回應的 ID，添加到請求中
+        if previous_response_id:
+            request_data["previous_response_id"] = previous_response_id
+        
+        # 發送 API 請求
+        response = client.responses.create(**request_data)
         
         # 正確提取文本內容
         content = response.output[0].content[0].text
         
         # 處理 LaTeX 格式，確保正確渲染
-        # 不需要替換 \( 和 \)，因為 MathJax 已經支持這種格式
-        # 只需要處理可能的轉義問題
         content = content.replace('\\\\(', '\\(').replace('\\\\)', '\\)')
         content = content.replace('\\\\[', '\\[').replace('\\\\]', '\\]')
         
@@ -110,10 +117,9 @@ def handle_math_classification(user_input):
         # 計算成本
         cost = calculate_cost(input_tokens, cached_tokens, output_tokens)
         
-        # 更新用戶的 API 配額（需要實現這個函數）
+        # 更新用戶的 API 配額
         update_user_quota(input_tokens, output_tokens, cost)
         
-        # 返回 API 回應的內容，包括 token 使用情況和成本
         return {
             "status": "success",
             "content": content,
@@ -123,29 +129,31 @@ def handle_math_classification(user_input):
                 "output": output_tokens,
                 "total": total_tokens
             },
-            "cost": cost
+            "cost": cost,
+            "response_id": response.id
         }
     except Exception as e:
-        # 處理錯誤情況
         return {
             "status": "error",
             "message": str(e)
         }
 
-def handle_word_problem_converter(user_input):
+def handle_word_problem_converter(user_input, previous_response_id=None):
     """
     處理應用題轉換工具的 API 請求
     
     Args:
         user_input (str): 用戶輸入的數學題目
+        previous_response_id (str, optional): 上一次回應的 ID
         
     Returns:
         dict: API 回應結果
     """
     try:
-        response = client.responses.create(
-            model="gpt-4o",
-            input=[
+        # 準備 API 請求
+        request_data = {
+            "model": "gpt-4o",
+            "input": [
                 {
                     "role": "system",
                     "content": [
@@ -165,25 +173,30 @@ def handle_word_problem_converter(user_input):
                     ]
                 }
             ],
-            text={
+            "text": {
                 "format": {
                     "type": "text"
                 }
             },
-            reasoning={},
-            tools=[],
-            temperature=1.0,
-            max_output_tokens=2048,
-            top_p=1,
-            store=True
-        )
+            "reasoning": {},
+            "tools": [],
+            "temperature": 1.0,
+            "max_output_tokens": 2048,
+            "top_p": 1,
+            "store": True
+        }
+        
+        # 如果有上一次回應的 ID，添加到請求中
+        if previous_response_id:
+            request_data["previous_response_id"] = previous_response_id
+        
+        # 發送 API 請求
+        response = client.responses.create(**request_data)
         
         # 正確提取文本內容
         content = response.output[0].content[0].text
         
         # 處理 LaTeX 格式，確保正確渲染
-        # 不需要替換 \( 和 \)，因為 MathJax 已經支持這種格式
-        # 只需要處理可能的轉義問題
         content = content.replace('\\\\(', '\\(').replace('\\\\)', '\\)')
         content = content.replace('\\\\[', '\\[').replace('\\\\]', '\\]')
         
@@ -196,10 +209,9 @@ def handle_word_problem_converter(user_input):
         # 計算成本
         cost = calculate_cost(input_tokens, cached_tokens, output_tokens)
         
-        # 更新用戶的 API 配額（需要實現這個函數）
+        # 更新用戶的 API 配額
         update_user_quota(input_tokens, output_tokens, cost)
         
-        # 返回 API 回應的內容，包括 token 使用情況和成本
         return {
             "status": "success",
             "content": content,
@@ -209,29 +221,31 @@ def handle_word_problem_converter(user_input):
                 "output": output_tokens,
                 "total": total_tokens
             },
-            "cost": cost
+            "cost": cost,
+            "response_id": response.id
         }
     except Exception as e:
-        # 處理錯誤情況
         return {
             "status": "error",
             "message": str(e)
         }
 
-def handle_cr_classification(user_input):
+def handle_cr_classification(user_input, previous_response_id=None):
     """
     處理 CR 分類工具的 API 請求
     
     Args:
         user_input (str): 用戶輸入的 CR 題目
+        previous_response_id (str, optional): 上一次回應的 ID
         
     Returns:
         dict: API 回應結果
     """
     try:
-        response = client.responses.create(
-            model="gpt-4o",
-            input=[
+        # 準備 API 請求
+        request_data = {
+            "model": "gpt-4o",
+            "input": [
                 {
                     "role": "system",
                     "content": [
@@ -280,18 +294,25 @@ Plan:
                     ]
                 }
             ],
-            text={
+            "text": {
                 "format": {
                     "type": "text"
                 }
             },
-            reasoning={},
-            tools=[],
-            temperature=0.2,
-            max_output_tokens=2048,
-            top_p=1,
-            store=True
-        )
+            "reasoning": {},
+            "tools": [],
+            "temperature": 0.2,
+            "max_output_tokens": 2048,
+            "top_p": 1,
+            "store": True
+        }
+        
+        # 如果有上一次回應的 ID，添加到請求中
+        if previous_response_id:
+            request_data["previous_response_id"] = previous_response_id
+        
+        # 發送 API 請求
+        response = client.responses.create(**request_data)
         
         # 正確提取文本內容
         content = response.output[0].content[0].text
@@ -321,7 +342,8 @@ Plan:
                 "output": output_tokens,
                 "total": total_tokens
             },
-            "cost": cost
+            "cost": cost,
+            "response_id": response.id
         }
     except Exception as e:
         return {
@@ -329,20 +351,22 @@ Plan:
             "message": str(e)
         }
 
-def handle_distractor_mocker(user_input):
+def handle_distractor_mocker(user_input, previous_response_id=None):
     """
     處理混淆選項檢討工具的 API 請求
     
     Args:
         user_input (str): 用戶輸入的題目和兩個選項
+        previous_response_id (str, optional): 上一次回應的 ID
         
     Returns:
         dict: API 回應結果
     """
     try:
-        response = client.responses.create(
-            model="gpt-4o",
-            input=[
+        # 準備 API 請求
+        request_data = {
+            "model": "gpt-4o",
+            "input": [
                 {
                     "role": "system",
                     "content": [
@@ -362,18 +386,25 @@ def handle_distractor_mocker(user_input):
                     ]
                 }
             ],
-            text={
+            "text": {
                 "format": {
                     "type": "text"
                 }
             },
-            reasoning={},
-            tools=[],
-            temperature=1.0,
-            max_output_tokens=2048,
-            top_p=1,
-            store=True
-        )
+            "reasoning": {},
+            "tools": [],
+            "temperature": 1.0,
+            "max_output_tokens": 2048,
+            "top_p": 1,
+            "store": True
+        }
+        
+        # 如果有上一次回應的 ID，添加到請求中
+        if previous_response_id:
+            request_data["previous_response_id"] = previous_response_id
+        
+        # 發送 API 請求
+        response = client.responses.create(**request_data)
         
         # 正確提取文本內容
         content = response.output[0].content[0].text
@@ -403,7 +434,8 @@ def handle_distractor_mocker(user_input):
                 "output": output_tokens,
                 "total": total_tokens
             },
-            "cost": cost
+            "cost": cost,
+            "response_id": response.id
         }
     except Exception as e:
         return {
@@ -487,21 +519,29 @@ TOOL_HANDLERS = {
     # 可以添加更多工具的處理函數
 }
 
-def process_tool_request(tool_type, user_input):
+def process_tool_request(tool_type, user_input, previous_response_id=None):
     """
     處理工具請求的主函數
     
     Args:
         tool_type (str): 工具類型
         user_input (str): 用戶輸入
+        previous_response_id (str, optional): 上一次回應的 ID
         
     Returns:
         dict: 處理結果
     """
-    if tool_type in TOOL_HANDLERS:
-        return TOOL_HANDLERS[tool_type](user_input)
-    else:
+    try:
+        # 根據工具類型處理請求
+        if tool_type in TOOL_HANDLERS:
+            return TOOL_HANDLERS[tool_type](user_input, previous_response_id)
+        else:
+            return {
+                "status": "error",
+                "message": f"未知的工具類型: {tool_type}"
+            }
+    except Exception as e:
         return {
             "status": "error",
-            "message": f"未知的工具類型: {tool_type}"
+            "message": str(e)
         }

@@ -596,7 +596,8 @@ def quant_tool():
 def verbal_tool():
     if request.method == 'POST':
         user_input = request.form.get('user_input')
-        instruction = request.form.get('instruction', 'cr_classification')
+        tool_type = request.form.get('tool_type', 'cr_classification')
+        previous_response_id = request.form.get('previous_response_id')
         
         # 檢查用戶餘額是否足夠
         has_balance, balance = token_manager.check_balance(current_user.id)
@@ -607,11 +608,11 @@ def verbal_tool():
                 messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
             else:
                 messages = []
-            return render_template('verbal_tool.html', messages=messages, api_balance=balance)
+            return render_template('verbal_tool.html', messages=messages, api_balance=balance, selected_tool=tool_type)
         
         # 使用工具 API 處理請求
         from tools_api import process_tool_request
-        result = process_tool_request(instruction, user_input)
+        result = process_tool_request(tool_type, user_input, previous_response_id)
         
         # 創建新的消息
         timestamp = datetime.now()
@@ -636,13 +637,15 @@ def verbal_tool():
         # AI 回應
         if result['status'] == 'success':
             ai_content = result['content']
+            response_id = result.get('response_id')
         else:
             ai_content = f"處理請求時發生錯誤: {result['message']}"
+            response_id = None
             
         # 估算 token 使用量和成本
-        prompt_tokens = len(user_input) // 4  # 粗略估計，4個字符約等於1個token
-        completion_tokens = len(ai_content) // 4
-        _, _, turn_cost = calculate_cost(prompt_tokens, completion_tokens)
+        prompt_tokens = result.get('tokens', {}).get('input', 0)
+        completion_tokens = result.get('tokens', {}).get('output', 0)
+        turn_cost = result.get('cost', 0)
         
         # 扣除用戶餘額
         new_balance = token_manager.deduct_balance(current_user.id, turn_cost)
@@ -677,10 +680,14 @@ def verbal_tool():
         return render_template('verbal_tool.html', 
                               messages=messages, 
                               api_balance=current_balance,
-                              days_until_reset=days_until_reset)
+                              days_until_reset=days_until_reset,
+                              selected_tool=tool_type,
+                              previous_response_id=response_id)
     
     # GET 請求處理
     chat_id = request.args.get('chat_id')
+    tool_type = request.args.get('tool_type', 'cr_classification')
+    
     if chat_id:
         session['chat_id'] = chat_id
         messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.timestamp).all()
@@ -704,7 +711,8 @@ def verbal_tool():
     return render_template('verbal_tool.html', 
                           messages=messages, 
                           api_balance=current_balance,
-                          days_until_reset=days_until_reset)
+                          days_until_reset=days_until_reset,
+                          selected_tool=tool_type)
 
 # 修改 core_tool 路由函數
 @app.route('/core_tool', methods=['GET', 'POST'])

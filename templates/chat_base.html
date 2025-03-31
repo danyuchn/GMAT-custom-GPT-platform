@@ -468,18 +468,12 @@
             </div>
             
             <div class="chat-input-container">
-                <form method="POST" class="chat-form" id="chat-form">
-                    <input type="hidden" name="instruction" id="instruction" value="{% block default_instruction %}simple_explain{% endblock %}">
-                    <div class="mb-3">
-                        <textarea class="form-control" id="user-input" name="user_input" rows="3" placeholder="{% block input_placeholder %}請輸入您的GMAT問題...{% endblock %}" required></textarea>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <button type="button" class="btn btn-secondary" onclick="clearInput()">
-                            <i class="fas fa-eraser me-1"></i>清除
-                        </button>
-                        <button type="submit" class="btn btn-send">
-                            <i class="fas fa-paper-plane me-1"></i>發送
-                        </button>
+                <form id="chatForm" method="post" class="chat-form">
+                    <input type="hidden" name="tool_type" id="tool_type" value="{{ selected_tool or default_instruction }}">
+                    <input type="hidden" name="previous_response_id" id="previous_response_id" value="{{ previous_response_id or '' }}">
+                    <div class="input-group">
+                        <textarea name="user_input" class="form-control" rows="3" placeholder="{% block input_placeholder %}請輸入您的問題...{% endblock %}" required></textarea>
+                        <button type="submit" class="btn btn-primary">發送</button>
                     </div>
                 </form>
             </div>
@@ -608,6 +602,20 @@
 
             // 更新 API 使用統計
             updateApiStats();
+
+            // 從模板變量獲取當前選擇的工具
+            const currentTool = '{{ selected_tool or default_instruction }}';
+            
+            // 如果有當前選擇的工具，使用它
+            if (currentTool) {
+                selectMode(currentTool);
+            } else {
+                // 否則嘗試從 localStorage 恢復
+                const savedMode = localStorage.getItem('selectedMode');
+                if (savedMode) {
+                    selectMode(savedMode);
+                }
+            }
         });
 
         // 調整佈局函數
@@ -639,20 +647,22 @@
         
         // 選擇解題模式
         function selectMode(mode) {
-            // 更新隱藏字段的值
-            document.getElementById('instruction').value = mode;
-            
-            // 更新卡片樣式
-            const cards = document.querySelectorAll('.theme-card');
-            cards.forEach(card => {
+            // 移除所有卡片的 active 類
+            document.querySelectorAll('.theme-card').forEach(card => {
                 card.classList.remove('active');
             });
             
-            // 找到並激活選中的卡片
+            // 為選中的卡片添加 active 類
             const selectedCard = document.querySelector(`.theme-card[onclick="selectMode('${mode}')"]`);
             if (selectedCard) {
                 selectedCard.classList.add('active');
             }
+            
+            // 更新隱藏的 tool_type 輸入
+            document.getElementById('tool_type').value = mode;
+            
+            // 保存選擇到 localStorage
+            localStorage.setItem('selectedMode', mode);
         }
         
         // 在表單提交前處理
