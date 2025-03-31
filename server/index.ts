@@ -11,16 +11,19 @@ app.use(express.urlencoded({ extended: false }));
 // Set up session
 const MemoryStoreSession = MemoryStore(session);
 app.use(session({
-  secret: "gmat-ai-secret",
-  resave: false,
-  saveUninitialized: false,
+  secret: "gmat-ai-secret-key",
+  resave: true,
+  saveUninitialized: true,
   store: new MemoryStoreSession({
     checkPeriod: 86400000 // prune expired entries every 24h
   }),
   cookie: {
-    secure: process.env.NODE_ENV === "production",
+    secure: false, // 在開發模式下設置為 false，以確保 cookie 可以通過 HTTP 傳輸
+    httpOnly: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+  },
+  name: 'gmat.sid' // 自定義 session ID 名稱
 }));
 
 app.use((req, res, next) => {

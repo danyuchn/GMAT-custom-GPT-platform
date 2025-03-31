@@ -85,7 +85,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.clearCookie("connect.sid");
+      // 清除自定義名稱的 cookie
+      res.clearCookie("gmat.sid");
       res.json({ message: "Logged out successfully" });
     });
   });
