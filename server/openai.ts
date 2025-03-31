@@ -210,9 +210,33 @@ export async function chatWithAI(
       id: response.id || ""
     };
   } catch (error) {
-    console.error("Error chatting with AI:", error);
+    // Log detailed error information
+    console.error("Error chatting with AI:", {
+      error: error instanceof Error ? error.message : error,
+      model: model,
+      params: completionParams
+    });
+
+    // Check for specific error types
+    if (error instanceof OpenAI.APIError) {
+      console.error("OpenAI API Error:", {
+        status: error.status,
+        message: error.message,
+        code: error.code,
+        type: error.type
+      });
+      
+      // Handle rate limits
+      if (error.status === 429) {
+        return {
+          content: "The service is currently busy. Please try again in a moment.",
+          id: ""
+        };
+      }
+    }
+
     return {
-      content: "I'm sorry, there was an error processing your request. Please try again.",
+      content: "I apologize, but I encountered an error. Please try your question again.",
       id: ""
     };
   }
