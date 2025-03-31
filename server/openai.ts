@@ -61,16 +61,16 @@ export async function generateSystemPrompt(prompt: string, promptTitle: string):
     const completionParams: any = {
       model: model,
       messages: messages,
-      temperature: 0.7, // 降低創意性提高響應速度
-      presence_penalty: 0,
-      frequency_penalty: 0,
     };
 
-    // o3-mini 模型使用 max_completion_tokens 而不是 max_tokens
-    if (model === "o3-mini") {
-      completionParams.max_completion_tokens = 1000;
-    } else {
+    // 僅當不是 o3-mini 模型時添加這些參數
+    if (model !== "o3-mini") {
+      completionParams.temperature = 0.7;
+      completionParams.presence_penalty = 0;
+      completionParams.frequency_penalty = 0;
       completionParams.max_tokens = 1000;
+    } else {
+      completionParams.max_completion_tokens = 1000;
     }
     
     const response = await openai.chat.completions.create(completionParams);
@@ -185,10 +185,7 @@ export async function chatWithAI(
       completionParams.context = { previous_messages: [{ id: previousResponseId }] };
     }
     
-    // 設置較短的超時時間，加快o3-mini模型的響應速度
-    if (model === "o3-mini") {
-      completionParams.timeout = 30000; // 30秒超時，避免長時間等待
-    }
+    // o3-mini 模型不需要特殊超時設置
     
     const response = await openai.chat.completions.create(completionParams);
 
