@@ -26,14 +26,15 @@ const renderLatex = (content: string): string => {
     const processedBlocks: { [key: string]: string } = {};
     let blockCount = 0;
     
-    // 第一步：將換行符轉換成<br>，但保護數學公式內的換行
-    let processedContent = content.replace(/\n/g, '<br>');
+    // 第一步：先保存所有公式內容，後續再處理換行
+    // 使用占位符替換所有公式，以保護它們
+    let processedContent = content;
     
     // 第二步：處理block公式 ($$...$$)，使用占位符替換它們
     processedContent = processedContent.replace(blockRegex, (match, latex) => {
       try {
-        // 將$$公式中的<br>換回\n以確保LaTeX正確解析
-        const fixedLatex = latex.replace(/<br>/g, '\n').trim();
+        // 保留原始LaTeX內容，不處理任何換行符，因為LaTeX需要原始格式
+        const fixedLatex = latex.trim();
         
         // 生成一個唯一的占位符
         const placeholder = `__KATEX_BLOCK_${blockCount++}__`;
@@ -78,10 +79,17 @@ const renderLatex = (content: string): string => {
       }
     });
     
-    // 第四步：將占位符替換回渲染好的LaTeX
+    // 第四步：現在安全地處理一般文本中的換行符
+    // 先將所有換行符轉換為特殊標記，避免與HTML沖突
+    processedContent = processedContent.replace(/\n/g, '__LINE_BREAK__');
+    
+    // 第五步：將占位符替換回渲染好的LaTeX
     Object.keys(processedBlocks).forEach(placeholder => {
       processedContent = processedContent.replace(placeholder, processedBlocks[placeholder]);
     });
+    
+    // 第六步：最後將換行符標記轉換為<br>
+    processedContent = processedContent.replace(/__LINE_BREAK__/g, '<br>');
     
     return processedContent;
   } catch (error) {

@@ -142,26 +142,44 @@ export default function Chat() {
       
       // 查找相應的system prompt ID
       if (systemPrompts && systemPrompts.length > 0) {
-        // 基於功能關鍵字匹配相應的系統提示類別
-        let promptCategory = "";
+        // 首先嘗試從URL獲取當前的promptId
+        const pathname = window.location.pathname;
+        const pathSegments = pathname.split('/');
+        const promptIdFromPath = parseInt(pathSegments[pathSegments.length - 1]);
         
-        // 數學相關功能
-        if (["simple_explain", "quick_solve", "variant_question", "concept_explanation", "pattern_recognition"].includes(func.key)) {
-          promptCategory = "Quant";
+        // 直接使用當前頁面的system prompt id
+        let promptData: SystemPrompt | undefined;
+        
+        if (!isNaN(promptIdFromPath) && promptIdFromPath > 0) {
+          // 從所有系統提示中尋找匹配當前ID的提示
+          promptData = systemPrompts.find(p => p.id === promptIdFromPath);
+          console.log("從URL獲取提示ID:", promptIdFromPath, "找到提示:", promptData?.title);
         } 
-        // 語言相關功能
-        else if (["quick_solve_cr_tpa", "quick_solve_rc", "mind_map", "approach_diagnosis", "logical_term_explanation"].includes(func.key)) {
-          promptCategory = "Verbal";
-        } 
-        // 圖表相關功能
-        else {
-          promptCategory = "Graph";
+        
+        // 如果沒有從URL獲取到有效的提示ID，則嘗試基於功能類型識別
+        if (!promptData) {
+          // 基於功能關鍵字匹配相應的系統提示類別
+          let promptCategory = "";
+          
+          // 數學相關功能
+          if (["simple_explain", "quick_solve", "variant_question", "concept_explanation", "pattern_recognition"].includes(func.key)) {
+            promptCategory = "Quant";
+          } 
+          // 語言相關功能
+          else if (["quick_solve_cr_tpa", "quick_solve_rc", "mind_map", "approach_diagnosis", "logical_term_explanation"].includes(func.key)) {
+            promptCategory = "Verbal";
+          } 
+          // 圖表相關功能
+          else {
+            promptCategory = "Graph";
+          }
+          
+          // 根據類別查找提示
+          promptData = systemPrompts.find((p: SystemPrompt) => 
+            p.title.includes(promptCategory)
+          );
+          console.log("基於功能類型識別提示類別:", promptCategory, "找到提示:", promptData?.title);
         }
-        
-        // 根據類別查找提示
-        const promptData = systemPrompts.find((p: SystemPrompt) => 
-          p.title.includes(promptCategory)
-        );
         
         if (promptData) {
           // 創建新對話
