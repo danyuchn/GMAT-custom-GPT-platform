@@ -73,8 +73,31 @@ export function determineModel(promptTitle: string): string {
     return "gpt-4o";
   }
   
-  const mathRelatedKeywords = ['quant', 'math', '數學', 'Quant'];
-  const graphRelatedKeywords = ['graph', 'chart', '圖表', 'Graph'];
+  // 為避免意外的model選擇，我們先檢查傳入的是否是已經是model名稱
+  if (promptTitle === "o3-mini" || promptTitle === "gpt-4o") {
+    console.log(`Model name was passed directly as promptTitle: ${promptTitle}`);
+    return promptTitle;
+  }
+  
+  // 檢查是否直接是系統提示標題
+  if (promptTitle === "Quant-related" || promptTitle.includes("Quant")) {
+    console.log(`Using o3-mini for Quant topic: ${promptTitle}`);
+    return "o3-mini";
+  }
+  
+  if (promptTitle === "Graph-Related" || promptTitle.includes("Graph")) {
+    console.log(`Using o3-mini for Graph topic: ${promptTitle}`);
+    return "o3-mini";
+  }
+  
+  if (promptTitle === "Verbal-Related" || promptTitle.includes("Verbal")) {
+    console.log(`Using gpt-4o for Verbal topic: ${promptTitle}`);
+    return "gpt-4o";
+  }
+  
+  // 如果不是直接的系統提示標題，則使用關鍵詞判斷
+  const mathRelatedKeywords = ['quant', 'math', '數學', 'mathematics'];
+  const graphRelatedKeywords = ['graph', 'chart', '圖表', 'diagram', 'plot'];
   
   // 檢查是否為數學相關提示
   const isMathRelated = mathRelatedKeywords.some(keyword => 
@@ -87,10 +110,10 @@ export function determineModel(promptTitle: string): string {
   );
   
   if (isMathRelated || isGraphRelated) {
-    console.log(`Using o3-mini for topic: ${promptTitle}`);
+    console.log(`Using o3-mini based on keywords for topic: ${promptTitle}`);
     return "o3-mini";
   } else {
-    console.log(`Using gpt-4o for topic: ${promptTitle}`);
+    console.log(`Using gpt-4o by default for topic: ${promptTitle}`);
     return "gpt-4o";
   }
 }
