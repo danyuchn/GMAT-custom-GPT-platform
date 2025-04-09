@@ -270,7 +270,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
+            <a class="navbar-brand" href="{{ url_for('chat.index') }}">
                 <i class="fas fa-brain me-2"></i>GMAT智能助手
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -280,28 +280,28 @@
                 <ul class="navbar-nav me-auto">
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('new_chat', category='quant') }}">
+                        <a class="nav-link" href="{{ url_for('chat.new_chat', category='quant') }}">
                             <i class="fas fa-calculator me-1"></i>数学
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('new_chat', category='verbal') }}">
+                        <a class="nav-link" href="{{ url_for('chat.new_chat', category='verbal') }}">
                             <i class="fas fa-book me-1"></i>语文
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('new_chat', category='graph') }}">
+                        <a class="nav-link" href="{{ url_for('chat.new_chat', category='graph') }}">
                             <i class="fas fa-chart-line me-1"></i>图表
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('history') }}">
+                        <a class="nav-link" href="{{ url_for('chat.history') }}">
                             <i class="fas fa-history me-1"></i>历史记录
                         </a>
                     </li>
                     {% if current_user.username == 'admin' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('admin_chats') }}">
+                        <a class="nav-link" href="{{ url_for('admin.admin_chats') }}">
                             <i class="fas fa-cog me-1"></i>管理后台
                         </a>
                     </li>
@@ -316,18 +316,18 @@
                         </span>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('logout') }}">
+                        <a class="nav-link" href="{{ url_for('auth.logout') }}">
                             <i class="fas fa-sign-out-alt me-1"></i>登出
                         </a>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('login') }}">
+                        <a class="nav-link" href="{{ url_for('auth.login') }}">
                             <i class="fas fa-sign-in-alt me-1"></i>登录
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('register') }}">
+                        <a class="nav-link" href="{{ url_for('auth.register') }}">
                             <i class="fas fa-user-plus me-1"></i>注册
                         </a>
                     </li>

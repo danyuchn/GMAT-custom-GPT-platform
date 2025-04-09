@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Multilingual Learning & Cognitive Intelligence Platform</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+            background-color: #f8fafc;
+            color: #333;
+        }
+        
+        .slides-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .slide {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 3vw; /* Increased padding */
+            box-sizing: border-box;
+            text-align: center;
+            background: linear-gradient(135deg, #162a4f 0%, #0b1a3a 100%); /* Softer gradient */
+            color: #fff;
+            /* Styles for transition */
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: scale(0.95);
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out, visibility 0.4s;
+        }
+        
+        .slide.active {
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            /* Styles for active state */
+            display: flex; /* Keep flex display */
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+        
+        h1 {
+            font-size: 3vw;
+            font-weight: bold;
+            margin-bottom: 0.5em;
+            color: #eaf4ff; /* Softer white */
+            width: 90%;
+            max-width: 1200px;
+        }
+        
+        h2 {
+            font-size: 2.5vw;
+            font-weight: bold;
+            margin-bottom: 0.5em;
+            color: #4a9fff;
+            width: 90%;
+            max-width: 1200px;
+        }
+        
+        h3 {
+            font-size: 2vw;
+            font-weight: bold;
+            color: #77b6ff;
+            margin-bottom: 0.5em;
+            width: 90%;
+            max-width: 1200px;
+        }
+        
+        p {
+            font-size: 1.8vw;
+            line-height: 1.6;
+            margin-bottom: 0.8em;
+            color: #cddcff; /* Softer text color */
+            width: 90%;
+            max-width: 1200px;
+        }
+        
+        li {
+            font-size: 1.7vw;
+            line-height: 1.6;
+            margin-bottom: 0.5em;
+            color: #cddcff;
+        }
+        
+        ul, ol {
+            text-align: left;
+            display: inline-block;
+            margin: 0 auto;
+            padding-left: 2em;
+            width: 100%;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px; /* Reduced gap */
+            z-index: 20;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px; /* Reduced gap */
+            z-index: 10;
+        }
+        
+        .nav-btn {
+            padding: 10px 20px; /* Slightly smaller */
+            font-size: 1.1vw;
+            font-weight: bold;
+            background-color: rgba(13, 75, 135, 0.7); /* More transparent */
+            color: white;
+            border: 1px solid rgba(74, 159, 255, 0.5); /* Transparent border */
+            border-radius: 20px; /* Pill shape */
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        .nav-btn:hover {
+            background-color: rgba(23, 108, 190, 0.9);
+            border-color: rgba(119, 182, 255, 0.8);
+        }
+
+       .nav-btn:disabled {
+           background-color: #555;
+           cursor: not-allowed;
+       }
+        
+        .phase-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow-y: auto;
+            max-height: 75vh; 
+            padding-right: 10px;
+        }
+        
+        .feature-box {
+           background-color: rgba(255, 255, 255, 0.05); /* More subtle background */
+           border-left: 4px solid #4a9fff;
+            padding: 20px; /* Increased padding */
+            margin: 20px 0;
+            text-align: left;
+           border-radius: 0 8px 8px 0; /* Slightly more rounded */
+            width: 85%; /* Slightly narrower */
+            max-width: 900px;
+           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); /* Softer shadow */
+        }
+        
+        .feature-box h4 {
+            font-size: 1.6vw;
+            margin: 0 0 10px 0;
+            color: #77b6ff;
+        }
+        
+        .feature-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        table {
+            width: 85%; /* Slightly narrower */
+            max-width: 900px;
+            margin: 20px auto;
+            border-collapse: collapse;
+            font-size: 1.4vw;
+           background-color: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px; /* Rounded corners for table */
+            overflow: hidden; /* Needed for border-radius */
+        }
+        
+        table, th, td {
+            border: none; /* Remove internal borders */
+        }
+        
+        th, td {
+            padding: 15px; /* Increased padding */
+            text-align: left; /* Align left for readability */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Row separator */
+        }
+
+        th {
+           background-color: rgba(13, 75, 135, 0.6); /* Transparent header */
+            color: white;
+            font-weight: bold;
+            text-align: center; /* Center align header text */
+        }
+
+        tr:last-child td {
+            border-bottom: none; /* Remove border for last row */
+        }
+        
+        tr:nth-child(even) {
+           background-color: rgba(255, 255, 255, 0.02); /* Even more subtle difference */
+        }
+        
+        .slide-number {
+            position: fixed;
+            bottom: 10px;
+            right: 20px;
+            font-size: 1vw; /* Smaller */
+            color: rgba(255, 255, 255, 0.4); /* More subtle */
+        }
+        
+        /* For screens smaller than 768px */
+        @media (max-width: 768px) {
+            .slide { padding: 5vw; } /* Adjust padding */
+            h1 { font-size: 6vw; }
+            h2 { font-size: 5vw; }
+            h3 { font-size: 4.5vw; }
+            p, li { font-size: 4vw; }
+            .feature-box h4 { font-size: 3.8vw; }
+            table { 
+                font-size: 3.5vw; 
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap; 
+                width: 90%;
+            }
+             th, td { padding: 10px; } /* Adjust table padding */
+            .slide-number { font-size: 2.5vw; }
+            .nav-btn { font-size: 3vw; padding: 8px 15px; }
+            .indicator-dot { width: 8px; height: 8px; }
+            .controls { gap: 8px; }
+        }
+        
+        /* Scrollbar Styling */
+        .phase-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .phase-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .phase-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+        
+        .phase-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Slide Indicators */
+        .slide-indicators {
+            display: flex;
+            gap: 8px; /* Reduced gap */
+            margin-bottom: 10px; 
+        }
+        
+        .indicator-dot {
+            width: 10px; /* Smaller dots */
+            height: 10px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        
+        .indicator-dot:hover {
+            background-color: rgba(255, 255, 255, 0.6);
+            transform: scale(1.2); /* Slight scale on hover */
+        }
+        
+        .indicator-dot.active {
+            background-color: #ffffff;
+            transform: scale(1.2); /* Slightly larger active dot */
+        }
+
+        /* Table of Contents Panel */
+        .toc-panel {
+            position: fixed;
+            bottom: 65px; /* Adjusted position */
+            left: 20px;
+            background-color: rgba(13, 75, 135, 0.95); /* Slightly less transparent */
+            border: 1px solid rgba(74, 159, 255, 0.6);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); /* Stronger shadow */
+            z-index: 25;
+            width: 180px; /* Narrower */
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, visibility 0.3s, transform 0.3s ease;
+        }
+        
+        .toc-panel.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .toc-panel h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #ffffff;
+            font-size: 1em;
+            border-bottom: 1px solid rgba(74, 159, 255, 0.5);
+            padding-bottom: 5px;
+        }
+        
+        .toc-panel ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+        }
+        
+        .toc-panel li {
+            margin-bottom: 8px;
+        }
+        
+        .toc-link {
+            color: #cce0ff;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 0.9em; /* Slightly smaller font */
+            transition: color 0.2s;
+            display: block; /* Ensure full clickable area */
+        }
+        
+        .toc-link:hover {
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="slides-container">
+        <!-- Title Slide -->
+        <div class="slide active">
+            <h1>AI-Powered Multilingual Learning & Cognitive Intelligence Platform</h1>
+            <h2>Product Roadmap Presentation</h2>
+            <p>From MVP in Taiwan's GMAT market to global cognitive augmentation — a 7-phase expansion strategy across EdTech, HR, and psychology.</p>
+            <div class="slide-number">1/12</div>
+        </div>
+        
+        <!-- Phase 1 -->
+        <div class="slide">
+            <h2>Phase 1: MVP Launch – Taiwan GMAT Market</h2>
+            <h3>Net Profit Target: $2,000</h3>
+            <div class="phase-container">
+                <div class="feature-box">
+                    <h4>Goals & Market</h4>
+                    <ul>
+                        <li>Goal: Validate GMAT market with a working MVP</li>
+                        <li>Market: 3,000 GMAT test-takers in Taiwan</li>
+                        <li>Target Users: 630 (21% conversion)</li>
+                        <li>Timeline: 3 months (4 weeks dev + 8 weeks promotion)</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h4>Core Features</h4>
+                    <ul>
+                        <li>Multilingual UI (Traditional Chinese & English)</li>
+                        <li>AI-based Q&A (Logic, Math, Reading)</li>
+                        <li>Email/password login with usage tracking</li>
+                        <li>Quota system: 50 free, 200 uses @ $9.99/mo</li>
+                        <li>Redeemable code plan: $4.99/150 turns</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">2/12</div>
+        </div>
+        
+        <!-- Phase 2 -->
+        <div class="slide">
+            <h2>Phase 2: Self-Assessment & Subscription Expansion</h2>
+            <h3>Net Profit Target: $5,000</h3>
+            <div class="phase-container">
+                <div class="feature-box">
+                    <h4>Goals & Market</h4>
+                    <ul>
+                        <li>Goal: Expand to GRE market; add self-review tools</li>
+                        <li>Market: GMAT + GRE (~5,500 users)</li>
+                        <li>Target Users: 1,490 (27%)</li>
+                        <li>Timeline: 6 months (5 weeks dev + 3 months promo)</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h4>Key Features</h4>
+                    <ul>
+                        <li>Weakness analysis based on user history</li>
+                        <li>Context clear button</li>
+                        <li>Flexible quotas (150 to 500 turns, reminders)</li>
+                        <li>Simplified Chinese interface</li>
+                        <li>Usage analytics for admin</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">3/12</div>
+        </div>
+        
+        <!-- Phase 3 -->
+        <div class="slide">
+            <h2>Phase 3: Teacher Feedback & ML Integration</h2>
+            <h3>Net Profit Target: $10,000</h3>
+            <div class="phase-container">
+                <div class="feature-box">
+                    <h4>Goals & Market</h4>
+                    <ul>
+                        <li>Goal: Add teacher role + ML-based diagnosis</li>
+                        <li>Market: Taiwan's full test prep market (35,500)</li>
+                        <li>Target Users: 2,710 (7.6%)</li>
+                        <li>Timeline: 12 months (6 weeks dev + 6 months promo)</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h4>Core Features</h4>
+                    <ul>
+                        <li>Teacher login & student feedback system</li>
+                        <li>TOEFL & IELTS (listening + reading) modules</li>
+                        <li>ML Weakness detection</li>
+                        <li>Prompt suggestion engine (hardcoded + ML-based)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">4/12</div>
+        </div>
+        
+        <!-- Phase 4 -->
+        <div class="slide">
+            <h2>Phase 4: Course Library + Southeast Asia Expansion</h2>
+            <h3>Net Profit Target: $12,840</h3>
+            <div class="phase-container">
+                <div class="feature-box">
+                    <h4>Goals & Market</h4>
+                    <ul>
+                        <li>Goal: Launch course recommendation + enter SEA</li>
+                        <li>Market: Taiwan + SEA (535,500 users)</li>
+                        <li>Target Users: 4,000</li>
+                        <li>Timeline: 18 months (6 weeks dev + 6 months promo)</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h4>Features</h4>
+                    <ul>
+                        <li>Personalized course suggestions based on ML</li>
+                        <li>Teacher content upload + matching backend</li>
+                        <li>Enhanced analytics to match weak spots with content</li>
+                        <li>SEA Pricing: $7.99 special access plan</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">5/12</div>
+        </div>
+        
+        <!-- Phase 5 -->
+        <div class="slide">
+            <h2>Phase 5: Full Optimization & Global Expansion</h2>
+            <h3>Net Profit Target: $20,360</h3>
+            <div class="phase-container">
+                <div class="feature-box">
+                    <h4>Goals & Market</h4>
+                    <ul>
+                        <li>Goal: Scale globally, polish full stack</li>
+                        <li>Market: Global (Taiwan + SEA + others)</li>
+                        <li>Target Users: 6,000</li>
+                        <li>Timeline: 24 months</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h4>Key Upgrades</h4>
+                    <ul>
+                        <li>Languages: Add Korean + Thai</li>
+                        <li>Google OAuth login</li>
+                        <li>Admin dashboard: alerts, usage, fraud</li>
+                        <li>Stripe payment system</li>
+                        <li>Adaptive ML prompt suggestion</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">6/12</div>
+        </div>
+        
+        <!-- Phase 6 -->
+        <div class="slide">
+            <h2>Phase 6: Rhythmic Intelligence Platform</h2>
+            <h3>Net Profit Target: $35,000</h3>
+            <div class="phase-container">
+                <div class="feature-box">
+                    <h4>Goals & Market</h4>
+                    <ul>
+                        <li>Goal: Transform into a cross-role rhythm awareness tool</li>
+                        <li>Market: Global professionals (HR, coaches, therapists)</li>
+                        <li>Target Users: 10,000</li>
+                        <li>Timeline: 30 months</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h4>Roles & Interfaces</h4>
+                    <ul>
+                        <li>Student: Mood log, rhythm ledger, insight reports</li>
+                        <li>Coach/Psychologist: Client mirror, multi-role workspaces</li>
+                        <li>HR/Founder: Task buffer, ML rhythm analyzer, inner dialogue module</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">7/12</div>
+        </div>
+        
+        <!-- Phase 7 -->
+        <div class="slide">
+            <h2>Phase 7: PAM — Psychological Affordance Mapper</h2>
+            <h3>Net Profit Target: $60,000</h3>
+            <div class="phase-container">
+                <div class="feature-box">
+                    <h4>Goals & Market</h4>
+                    <ul>
+                        <li>Goal: Deliver a four-dimensional cognitive decision aid system</li>
+                        <li>Market: Global high-cognition professionals</li>
+                        <li>Target Users: 15,000</li>
+                        <li>Timeline: 36 months</li>
+                    </ul>
+                </div>
+                <div class="feature-box">
+                    <h4>User Tools</h4>
+                    <ul>
+                        <li>Decision splitter</li>
+                        <li>Language distortion detector</li>
+                        <li>Relationship script mirror</li>
+                        <li>Pro Tools: Emotion triggers, Topic radar, Cognitive density visualizer</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">8/12</div>
+        </div>
+        
+        <!-- Roadmap Summary -->
+        <div class="slide">
+            <h2>Roadmap Summary</h2>
+            <div class="phase-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Phase</th>
+                            <th>Market</th>
+                            <th>Users</th>
+                            <th>Net Profit</th>
+                            <th>Focus Area</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Taiwan GMAT</td>
+                            <td>630</td>
+                            <td>$2,000</td>
+                            <td>MVP Launch</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>GMAT + GRE</td>
+                            <td>1,490</td>
+                            <td>$5,000</td>
+                            <td>Self-Check + Expansion</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Full Taiwan Exams</td>
+                            <td>2,710</td>
+                            <td>$10,000</td>
+                            <td>Teachers + ML Diagnosis</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>SEA Expansion</td>
+                            <td>4,000</td>
+                            <td>$12,840</td>
+                            <td>Course Matching + SEA</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>Global</td>
+                            <td>6,000</td>
+                            <td>$20,360</td>
+                            <td>Full Optimization</td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td>Cross-domain Pros</td>
+                            <td>10,000</td>
+                            <td>$35,000</td>
+                            <td>Rhythmic Intelligence</td>
+                        </tr>
+                        <tr>
+                            <td>7</td>
+                            <td>High-cognition Pro</td>
+                            <td>15,000</td>
+                            <td>$60,000</td>
+                            <td>Psychological Affordances</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="slide-number">9/12</div>
+        </div>
+        
+        <!-- Key Highlights -->
+        <div class="slide">
+            <h2>Key Highlights</h2>
+            <div class="phase-container">
+                <ul style="font-size: 1.8vw; line-height: 1.8;">
+                    <li><strong>Rapid Validation:</strong> $2,000 net profit in 3 months</li>
+                    <li><strong>Predictable Growth:</strong> 630 → 15,000 users over 7 stages</li>
+                    <li><strong>Tech Upgrade:</strong> ML from Phase 3; NLP + cognition from Phase 6</li>
+                    <li><strong>Global Scope:</strong> From EdTech to mental health & B2B SaaS</li>
+                </ul>
+            </div>
+            <div class="slide-number">10/12</div>
+        </div>
+        
+        <!-- Risk Factors -->
+        <div class="slide">
+            <h2>Risk Factors & Mitigations</h2>
+            <div class="phase-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Phase</th>
+                            <th>Risk</th>
+                            <th>Mitigation Strategy</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Low market demand, partner failure</td>
+                            <td>Early research, dev buffer</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>GRE churn, budget overrun</td>
+                            <td>Strong value props, cost control</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>ML inaccuracy, teacher recruitment</td>
+                            <td>Hire expert DS, build teacher pool</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>SEA penetration, course gaps</td>
+                            <td>Partner w/ agencies, preload verified courses</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>Global legal, anomaly detection</td>
+                            <td>Compliance research, anomaly algorithms</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="slide-number">11/12</div>
+        </div>
+        
+        <!-- Conclusion -->
+        <div class="slide">
+            <h2>Conclusion</h2>
+            <div class="phase-container">
+                <p style="font-size: 2vw; text-align: center; max-width: 80%; margin: 0 auto;">
+                    Starting from an MVP in Taiwan's GMAT education market,
+                    <br>to a globally impactful cognitive intelligence platform,
+                    <br>our product roadmap provides a clear growth trajectory,
+                    <br>ensuring sustainable profits and technological advancement at each phase.
+                </p>
+                <p style="font-size: 2.2vw; margin-top: 40px; color: #77b6ff; font-weight: bold;">
+                    Thank you for your attention!
+                </p>
+            </div>
+            <div class="slide-number">12/12</div>
+        </div>
+    </div>
+    
+   <div class="controls">
+       <div class="slide-indicators" id="slide-indicators"></div>
+       <div class="nav-buttons" id="nav-buttons">
+           <button class="nav-btn" id="menu-btn">Menu</button>
+           <button class="nav-btn" id="prev-btn">Previous</button>
+           <button class="nav-btn" id="next-btn">Next</button>
+           <button class="nav-btn" id="fullscreen-btn">Fullscreen</button>
+        </div>
+   </div>
+   
+   <div id="toc-menu" class="toc-panel">
+       <h4>Table of Contents</h4>
+       <ul>
+           <li><span class="toc-link" data-slide="0">Title</span></li>
+           <li><span class="toc-link" data-slide="1">Phase 1: MVP</span></li>
+           <li><span class="toc-link" data-slide="2">Phase 2: Self-Assessment</span></li>
+           <li><span class="toc-link" data-slide="3">Phase 3: ML Integration</span></li>
+           <li><span class="toc-link" data-slide="4">Phase 4: SEA Expansion</span></li>
+           <li><span class="toc-link" data-slide="5">Phase 5: Global Scope</span></li>
+           <li><span class="toc-link" data-slide="6">Phase 6: Rhythmic Intel.</span></li>
+           <li><span class="toc-link" data-slide="7">Phase 7: PAM</span></li>
+           <li><span class="toc-link" data-slide="8">Roadmap Summary</span></li>
+           <li><span class="toc-link" data-slide="9">Key Highlights</span></li>
+           <li><span class="toc-link" data-slide="10">Risk Factors</span></li>
+           <li><span class="toc-link" data-slide="11">Conclusion</span></li>
+       </ul>
+   </div>
+   
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        let currentSlide = 0;
+        const totalSlides = slides.length;
+        
+        function showSlide(index) {
+           const indicatorsContainer = document.getElementById('slide-indicators');
+           const currentIndicator = indicatorsContainer.children[currentSlide];
+            // Hide current slide
+            slides[currentSlide].classList.remove('active');
+            if (currentIndicator) currentIndicator.classList.remove('active');
+            
+            // Update index
+            currentSlide = index;
+            
+            // Ensure index is within valid range
+            if (currentSlide < 0) currentSlide = totalSlides - 1;
+            if (currentSlide >= totalSlides) currentSlide = 0;
+            
+            // Show new slide
+            slides[currentSlide].classList.add('active');
+           const nextIndicator = indicatorsContainer.children[currentSlide];
+           if (nextIndicator) nextIndicator.classList.add('active');
+        }
+        
+        // Button event listeners
+        const menuBtn = document.getElementById('menu-btn');
+        const tocMenu = document.getElementById('toc-menu');
+
+        if (menuBtn && tocMenu) {
+            menuBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent click from closing menu immediately
+                tocMenu.classList.toggle('visible');
+            });
+
+            // Close menu if clicked outside
+            document.addEventListener('click', (e) => {
+                if (!tocMenu.contains(e.target) && !menuBtn.contains(e.target)) {
+                    tocMenu.classList.remove('visible');
+                }
+            });
+        }
+
+        // TOC Link Listeners
+        const tocLinks = document.querySelectorAll('.toc-link');
+        tocLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const slideIndex = parseInt(link.dataset.slide, 10);
+                if (!isNaN(slideIndex)) {
+                    showSlide(slideIndex);
+                    if(tocMenu) tocMenu.classList.remove('visible'); // Hide menu after click
+                }
+            });
+        });
+
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            showSlide(currentSlide - 1);
+        });
+        
+        document.getElementById('next-btn').addEventListener('click', () => {
+            showSlide(currentSlide + 1);
+        });
+        
+        // Keyboard event listeners
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                showSlide(currentSlide - 1);
+            } else if (e.key === 'ArrowRight') {
+                showSlide(currentSlide + 1);
+           } else if (e.key === 'Home') {
+               showSlide(0); // Go to first slide
+           } else if (e.key === 'End') {
+               showSlide(totalSlides - 1); // Go to last slide
+            }
+        });
+        
+        // Fullscreen Button Logic
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        
+        function updateFullscreenButton() {
+            if (document.fullscreenElement) {
+                fullscreenBtn.textContent = 'Exit Fullscreen';
+            } else {
+                fullscreenBtn.textContent = 'Fullscreen';
+            }
+        }
+        
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                    });
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            });
+            
+            // Update button text on fullscreen change (e.g., user pressing Esc)
+            document.addEventListener('fullscreenchange', updateFullscreenButton);
+            
+            // Initial button text
+            updateFullscreenButton(); 
+        }
+        
+        // Swipe Navigation Logic
+        const slidesContainer = document.querySelector('.slides-container');
+        let touchstartX = 0;
+        let touchendX = 0;
+        let threshold = 50; // Minimum swipe distance
+
+        if (slidesContainer) {
+            slidesContainer.addEventListener('touchstart', event => {
+                touchstartX = event.changedTouches[0].screenX;
+            }, { passive: true }); // Passive for performance, default scroll not prevented here
+
+            slidesContainer.addEventListener('touchend', event => {
+                touchendX = event.changedTouches[0].screenX;
+                handleSwipe();
+            });
+        }
+
+        function handleSwipe() {
+            const swipeDistance = touchendX - touchstartX;
+            if (Math.abs(swipeDistance) >= threshold) { // Check if swipe distance is significant
+                if (touchendX < touchstartX) {
+                    // Swiped left (next slide)
+                    showSlide(currentSlide + 1);
+                } else if (touchendX > touchstartX) {
+                    // Swiped right (previous slide)
+                    showSlide(currentSlide - 1);
+                }
+            }
+        }
+
+        // Create indicators
+        const indicatorsContainer = document.getElementById('slide-indicators');
+        if (indicatorsContainer) { // Check if container exists
+            for (let i = 0; i < totalSlides; i++) {
+                const dot = document.createElement('span');
+                dot.classList.add('indicator-dot');
+                dot.dataset.slide = i;
+                dot.addEventListener('click', () => {
+                    showSlide(i);
+                });
+                indicatorsContainer.appendChild(dot);
+            }
+            
+            // Set initial active indicator
+            if (indicatorsContainer.children.length > 0) {
+                indicatorsContainer.children[0].classList.add('active');
+            }
+        } else {
+            console.error("Slide indicators container not found!");
+        }
+    </script>
+</body>
+</html> 

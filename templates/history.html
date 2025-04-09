@@ -45,7 +45,7 @@
 <body>
     <div class="container">
         <div class="nav-buttons d-flex justify-content-between">
-            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">返回首頁</a>
+            <a href="{{ url_for('chat.index') }}" class="btn btn-outline-secondary">返回首頁</a>
         </div>
         
         <h2 class="mb-4 text-center">聊天歷史</h2>
@@ -53,7 +53,7 @@
         {% if chats %}
             <div class="list-group">
                 {% for chat in chats %}
-                    <a href="{{ url_for('load_chat', chat_id=chat.id) }}" class="list-group-item list-group-item-action chat-item {{ chat.category }}">
+                    <a href="{{ url_for('chat.load_chat', chat_id=chat.id) }}" class="list-group-item list-group-item-action chat-item {{ chat.category }}">
                         <div class="d-flex justify-content-between">
                             <h5 class="mb-1">{{ chat.category|capitalize }} 聊天</h5>
                             <small>{{ chat.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>

@@ -164,14 +164,14 @@
     <div class="user-info">
         {% if current_user.is_authenticated %}
             <span><i class="fas fa-user-circle me-2"></i>{{ current_user.username }}</span>
-            <a href="{{ url_for('history') }}" class="btn btn-sm btn-outline-secondary mx-2"><i class="fas fa-history me-1"></i>聊天歷史</a>
+            <a href="{{ url_for('chat.history') }}" class="btn btn-sm btn-outline-secondary mx-2"><i class="fas fa-history me-1"></i>聊天歷史</a>
             {% if current_user.username == 'admin' %}
-            <a href="{{ url_for('admin_chats') }}" class="btn btn-sm btn-outline-primary mx-2"><i class="fas fa-cog me-1"></i>管理後台</a>
+            <a href="{{ url_for('admin.admin_chats') }}" class="btn btn-sm btn-outline-primary mx-2"><i class="fas fa-cog me-1"></i>管理後台</a>
             {% endif %}
-            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger"><i class="fas fa-sign-out-alt me-1"></i>登出</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-danger"><i class="fas fa-sign-out-alt me-1"></i>登出</a>
         {% else %}
-            <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-sign-in-alt me-1"></i>登入</a>
-            <a href="{{ url_for('register') }}" class="btn btn-sm btn-outline-success"><i class="fas fa-user-plus me-1"></i>註冊</a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-sign-in-alt me-1"></i>登入</a>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-sm btn-outline-success"><i class="fas fa-user-plus me-1"></i>註冊</a>
         {% endif %}
     </div>
 
@@ -193,7 +193,7 @@
                         <div class="card-body">
                             <h3 class="card-title">Quant 數學</h3>
                             <p class="card-text">解決GMAT數學問題，包括代數、幾何、統計等各類型題目。</p>
-                            <a href="{{ url_for('new_chat', category='quant') }}" class="btn btn-primary btn-start">開始解題</a>
+                            <a href="{{ url_for('chat.new_chat', category='quant') }}" class="btn btn-primary btn-start">開始解題</a>
                         </div>
                     </div>
                 </div>
@@ -206,7 +206,7 @@
                         <div class="card-body">
                             <h3 class="card-title">Verbal 語文</h3>
                             <p class="card-text">解決GMAT語文問題，包括閱讀理解、批判性推理和句子改錯。</p>
-                            <a href="{{ url_for('new_chat', category='verbal') }}" class="btn btn-success btn-start">開始解題</a>
+                            <a href="{{ url_for('chat.new_chat', category='verbal') }}" class="btn btn-success btn-start">開始解題</a>
                         </div>
                     </div>
                 </div>
@@ -236,7 +236,7 @@
                         <div class="card-body">
                             <h3 class="card-title">數學工具區</h3>
                             <p class="card-text">提供GMAT數學解題常用工具，包括公式查詢、計算器和解題技巧指南。</p>
-                            <a href="{{ url_for('quant_tool') }}" class="btn btn-info btn-start">進入工具區</a>
+                            <a href="{{ url_for('tools.quant_tool') }}" class="btn btn-info btn-start">進入工具區</a>
                         </div>
                     </div>
                 </div>
@@ -248,34 +248,34 @@
                         </div>
                         <div class="card-body">
                             <h3 class="card-title">語文工具區</h3>
-                            <p class="card-text">提供GMAT語文解題輔助工具，包括常見邏輯謬誤、關鍵詞彙和閱讀技巧。</p>
-                            <a href="{{ url_for('verbal_tool') }}" class="btn btn-danger btn-start">進入工具區</a>
+                            <p class="card-text">包括CR題型分類、RC文章結構分析等，幫助您提升語文部分表現。</p>
+                            <a href="{{ url_for('tools.verbal_tool') }}" class="btn btn-danger btn-start">進入工具區</a>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-md-4">
                     <div class="category-card">
-                        <div class="card-header" style="background: linear-gradient(135deg, #27ae60, #16a085);">
+                        <div class="card-header" style="background: linear-gradient(135deg, #1abc9c, #16a085);">
                             <div class="card-icon"><i class="fas fa-brain"></i></div>
                         </div>
                         <div class="card-body">
                             <h3 class="card-title">核心能力工具區</h3>
-                            <p class="card-text">提升GMAT核心能力的工具集，包括時間管理、解題策略和思維訓練方法。</p>
-                            <a href="{{ url_for('core_tool') }}" class="btn btn-success btn-start">進入工具區</a>
+                            <p class="card-text">使用分類、計數、診斷等工具，精準提升核心解題能力。</p>
+                            <a href="{{ url_for('tools.core_tool') }}" class="btn btn-warning btn-start">進入工具區</a>
                         </div>
                     </div>
                 </div>
             </div>
         {% else %}
-            <div class="alert-login">
-                <i class="fas fa-lock mb-4" style="font-size: 3rem; color: var(--primary-color);"></i>
-                <h3 class="mb-3">請先登入或註冊</h3>
-                <p class="mb-4">登入後即可使用GMAT智能解題助手，獲取專業的解題指導。</p>
-                <div>
-                    <a href="{{ url_for('login') }}" class="btn btn-primary me-2"><i class="fas fa-sign-in-alt me-1"></i>登入</a>
-                    <a href="{{ url_for('register') }}" class="btn btn-success"><i class="fas fa-user-plus me-1"></i>註冊</a>
-                </div>
+            <div class="alert alert-login" role="alert">
+                <h4 class="alert-heading"><i class="fas fa-info-circle me-2"></i>請先登入</h4>
+                <p>登入後即可開始使用 GMAT 智能解題助手。</p>
+                <hr>
+                <p class="mb-0">
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-primary me-2">前往登入</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-success">註冊帳號</a>
+                </p>
             </div>
         {% endif %}
     </div>

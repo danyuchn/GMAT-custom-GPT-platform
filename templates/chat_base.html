@@ -193,7 +193,10 @@
 
         // 改進的消息處理函數
         function processMessage(messageBody) {
-            if (!messageBody || messageBody.dataset.processed === 'true') return;
+            // Skip processing if already processed or if it's a system message body
+            if (!messageBody || messageBody.dataset.processed === 'true' || messageBody.closest('.system-message')) {
+                 return;
+            }
 
             let content = messageBody.innerHTML;
             
@@ -1040,9 +1043,9 @@
             <h1>{% block header_icon %}<i class="fas fa-robot me-2"></i>{% endblock %}{% block header_title %}GMAT 智能解題助手{% endblock %}</h1>
             <p>{% block header_subtitle %}提供詳細解題步驟與快速解法{% endblock %}</p>
             <div class="mt-3">
-                <a href="{{ url_for('index') }}" class="btn btn-outline-light me-2"><i class="fas fa-home me-1"></i>首頁</a>
-                <a href="{{ url_for('history') }}" class="btn btn-outline-light"><i class="fas fa-history me-1"></i>歷史記錄</a>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-light ms-2"><i class="fas fa-sign-out-alt me-1"></i>登出</a>
+                <a href="{{ url_for('chat.index') }}" class="btn btn-outline-light me-2"><i class="fas fa-home me-1"></i>首頁</a>
+                <a href="{{ url_for('chat.history') }}" class="btn btn-outline-light"><i class="fas fa-history me-1"></i>歷史記錄</a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light ms-2"><i class="fas fa-sign-out-alt me-1"></i>登出</a>
             </div>
         </div>
     </header>
@@ -1093,7 +1096,7 @@
                         <div class="message system-message">
                             <div class="message-content">
                                 <div class="message-body">
-                                    <i class="fas fa-info-circle me-2"></i>{{ message.content }}
+                                    {{ message.content|safe }}
                                 </div>
                             </div>
                         </div>
@@ -1119,7 +1122,7 @@
             </div>
             
             <div class="chat-input-container">
-                <form method="POST" id="chat-form" class="chat-form">
+                <form method="POST" id="chat-form" class="chat-form" action="{{ request.url }}">
                     <input type="hidden" name="instruction" id="instruction" value="{{ selected_tool or default_instruction }}">
                     <input type="hidden" name="tool_type" id="tool_type" value="{{ selected_tool or default_instruction }}">
                     <div class="input-group">
@@ -1192,37 +1195,37 @@
             document.getElementById('instruction').value = mode;
             document.getElementById('tool_type').value = mode;
             
-            // 保存選擇到 localStorage
-            localStorage.setItem('selectedMode', mode);
+            // 保存選擇到 localStorage (optional, for remembering user preference locally)
+            // localStorage.setItem('selectedMode', mode);
             
-            // 發送一個空的 POST 請求來更新 system prompt
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    'instruction': mode,
-                    'tool_type': mode,
-                    'user_input': ''
-                })
-            }).then(response => {
-                if (response.ok) {
-                    // 顯示模式切換提示
-                    const chatMessages = document.getElementById('chat-messages');
-                    const systemMessage = document.createElement('div');
-                    systemMessage.className = 'message system-message';
-                    systemMessage.innerHTML = `
-                        <div class="message-content">
-                            <div class="message-body">
-                                <i class="fas fa-info-circle me-2"></i>已切換到 ${selectedCard.querySelector('h4').textContent} 模式
-                            </div>
-                        </div>
-                    `;
-                    chatMessages.appendChild(systemMessage);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-            });
+            // // 發送一個空的 POST 請求來更新 system prompt (REMOVED)
+            // fetch(window.location.href, {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/x-www-form-urlencoded',
+            //     },
+            //     body: new URLSearchParams({
+            //         'instruction': mode,
+            //         'tool_type': mode,
+            //         'user_input': ''
+            //     })
+            // }).then(response => {
+            //     if (response.ok) {
+            //         // 顯示模式切換提示 (REMOVED - Handled by backend on next message)
+            //         // const chatMessages = document.getElementById('chat-messages');
+            //         // const systemMessage = document.createElement('div');
+            //         // systemMessage.className = 'message system-message';
+            //         // systemMessage.innerHTML = `
+            //         //     <div class="message-content">
+            //         //         <div class="message-body">
+            //         //             <i class="fas fa-info-circle me-2"></i>已切換到 ${selectedCard.querySelector('h4').textContent} 模式
+            //         //         </div>
+            //         //     </div>
+            //         // `;
+            //         // chatMessages.appendChild(systemMessage);
+            //         // chatMessages.scrollTop = chatMessages.scrollHeight;
+            //     }
+            // });
         }
     </script>
 </body>

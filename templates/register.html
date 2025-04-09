@@ -93,7 +93,7 @@
                 {% endif %}
             {% endwith %}
             
-            <form method="POST" action="{{ url_for('register') }}">
+            <form method="POST" action="{{ url_for('auth.register') }}">
                 <div class="mb-3">
                     <label for="username" class="form-label">用戶名稱</label>
                     <input type="text" class="form-control" id="username" name="username" value="{{ username }}" placeholder="用於登錄的專屬名稱" required>
@@ -113,7 +113,7 @@
                 <button type="submit" class="btn btn-register">註冊</button>
                 
                 <div class="text-center mt-3">
-                    已有帳號？ <a href="{{ url_for('login') }}">登入</a>
+                    已有帳號？ <a href="{{ url_for('auth.login') }}">登入</a>
                 </div>
             </form>
         </div>
